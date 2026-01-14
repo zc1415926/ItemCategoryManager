@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>条目分类管理器</title>
+    <link href="assets/css/bootstrap.min.css" rel="stylesheet">
+    <link href="style.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container-fluid">
+        <h1 class="text-center mb-4" style="font-weight: 800; color: #667eea;">
+            📝 条目分类管理器
+        </h1>
+
+        <!-- 当前文件名显示 -->
+        <div class="text-center mb-3">
+            <small class="text-muted" id="currentFileName">未命名文件</small>
+        </div>
+
+        <!-- 文件操作按钮组 -->
+        <div class="mb-4 d-flex justify-content-center gap-2">
+            <button class="btn btn-outline-primary" onclick="newFile()">
+                📄 新建
+            </button>
+            <button class="btn btn-outline-primary" onclick="openFile()">
+                📂 打开
+            </button>
+            <button class="btn btn-outline-primary" onclick="saveFile()">
+                💾 保存
+            </button>
+            <button class="btn btn-outline-primary" onclick="saveAs()">
+                💾 另存为
+            </button>
+            <input type="file" id="fileInput" accept=".json" style="display: none;" onchange="handleFileOpen(event)">
+        </div>
+
+        <!-- 成功提示Alerts容器 -->
+        <div id="alertContainer" style="position: fixed; top: 20px; right: 20px; z-index: 9999; max-width: 350px;">
+        </div>
+        
+        <div class="row">
+            <!-- 左侧：条目区域 -->
+            <div class="col-md-5">
+                <h4 class="section-title">条目列表</h4>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" id="itemInput" placeholder="输入条目内容...">
+                    <button class="btn-custom" onclick="addItem()">添加条目</button>
+                </div>
+                <button class="btn btn-outline-secondary btn-sm mb-3" onclick="showImportModal('item')">
+                    📥 批量导入条目
+                </button>
+                <div class="item-container" id="itemContainer" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="dragLeave(event)">
+                    <div class="empty-message" id="itemEmptyMessage">
+                        暂无条目，请添加新条目
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 右侧：分类区域 -->
+            <div class="col-md-7">
+                <h4 class="section-title">分类区域</h4>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" id="categoryInput" placeholder="输入分类名称...">
+                    <button class="btn-category" onclick="addCategory()">添加分类</button>
+                </div>
+                <button class="btn btn-outline-secondary btn-sm mb-3" onclick="showImportModal('category')">
+                    📥 批量导入分类
+                </button>
+                <div id="categoryContainer">
+                    <div class="empty-message" id="categoryEmptyMessage">
+                        暂无分类，请添加新分类
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 新建文件确认模态框 -->
+    <div class="modal fade" id="newFileModal" tabindex="-1" aria-labelledby="newFileModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="newFileModalLabel">确认新建文件</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>确定要新建文件吗？当前的所有内容将被清空。</p>
+                    <div class="alert alert-warning">
+                        <strong>⚠️ 警告</strong>
+                        <br>
+                        此操作将删除所有条目和分类，且无法撤销！
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-danger" id="confirmNewFileBtn">确定新建</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 打开文件确认模态框 -->
+    <div class="modal fade" id="openFileConfirmModal" tabindex="-1" aria-labelledby="openFileConfirmModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="openFileConfirmModalLabel">确认打开文件</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>当前文件有未保存的修改，是否保存？</p>
+                    <div class="alert alert-warning">
+                        <strong>⚠️ 注意</strong>
+                        <br>
+                        打开新文件前，您可以选择保存当前修改或放弃修改。
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancelOpenBtn">取消</button>
+                    <button type="button" class="btn btn-danger" id="discardAndOpenBtn">放弃修改</button>
+                    <button type="button" class="btn btn-primary" id="saveAndOpenBtn">保存并打开</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 删除确认模态框 -->
+    <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteModalLabel">确认删除</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="deleteModalContent"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-danger" id="confirmDeleteBtn">确定删除</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 提示模态框 -->
+    <div class="modal fade" id="alertModal" tabindex="-1" aria-labelledby="alertModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="alertModalLabel">提示</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="alertModalContent"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">确定</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 导入模态框 -->
+    <div class="modal fade" id="importModal" tabindex="-1" aria-labelledby="importModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="importModalLabel">批量导入</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="importModalContent">
+                        <div class="mb-3">
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" class="btn-check" name="importMethod" id="importMethodText" value="text" checked onchange="toggleImportMethod()">
+                                <label class="btn btn-outline-primary" for="importMethodText">📝 文本粘贴</label>
+                                <input type="radio" class="btn-check" name="importMethod" id="importMethodFile" value="file" onchange="toggleImportMethod()">
+                                <label class="btn btn-outline-primary" for="importMethodFile">📄 文件导入</label>
+                            </div>
+                        </div>
+
+                        <!-- 文件导入部分 -->
+                        <div id="fileImportSection" style="display: none;">
+                            <div class="alert alert-info">
+                                <strong>📄 文件格式说明：</strong>
+                            </div>
+                            <div id="importFormatInfo"></div>
+                            <div class="mt-3">
+                                <label for="importFile" class="form-label">选择文件：</label>
+                                <input type="file" class="form-control" id="importFile" accept=".json">
+                            </div>
+                        </div>
+
+                        <!-- 文本粘贴部分 -->
+                        <div id="textImportSection">
+                            <div class="alert alert-info">
+                                <strong>📝 文本粘贴说明：</strong>
+                            </div>
+                            <div id="textImportFormatInfo"></div>
+                            <div class="mt-3">
+                                <label for="importText" class="form-label">粘贴文本（每行一个条目）：</label>
+                                <textarea class="form-control" id="importText" rows="8" placeholder="条目1&#10;条目2&#10;条目3"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="confirmImport()">确定导入</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="assets/js/bootstrap.bundle.min.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>
