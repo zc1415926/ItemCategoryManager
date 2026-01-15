@@ -6,10 +6,12 @@ const fs = require('fs');
 try {
     require('electron-reload')(__dirname, {
         electron: path.join(__dirname, 'node_modules', '.bin', 'electron'),
-        hardResetMethod: 'exit',
+        hardResetMethod: 'reload',
         debug: true,
-        watchRenderer: true
+        watchRenderer: true,
+        ignored: /node_modules|\.git|dist|build|\.vscode/i
     });
+    console.log('✓ electron-reload 已启用 - 监听文件变化自动重载');
 } catch (e) {
     console.log('electron-reload not found');
 }
