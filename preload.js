@@ -5,5 +5,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     saveFileDialog: (defaultName) => ipcRenderer.invoke('save-file-dialog', defaultName),
     saveFile: (filePath, content) => ipcRenderer.invoke('save-file', filePath, content),
     readFile: (filePath) => ipcRenderer.invoke('read-file', filePath),
+    updateWindowTitle: (title) => ipcRenderer.send('update-window-title', title),
     isElectron: true
 });

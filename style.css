@@ -9,6 +9,65 @@ body {
     padding: 30px;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 }
+
+/* 工具栏样式 */
+.toolbar {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 20px 20px 0 0;
+    padding: 12px 30px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-bottom: none;
+    margin-left: -30px;
+    margin-right: -30px;
+    margin-top: -30px;
+}
+.toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.toolbar-divider {
+    width: 1px;
+    height: 30px;
+    background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.15), transparent);
+}
+.toolbar-btn {
+    background: transparent;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+    color: #495057;
+    font-size: 14px;
+    font-weight: 500;
+}
+.toolbar-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+.toolbar-btn:active:not(:disabled) {
+    transform: translateY(0);
+}
+.toolbar-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+.toolbar-icon {
+    font-size: 16px;
+}
+.toolbar-text {
+    font-size: 13px;
+}
 .section-title {
     font-weight: 700;
     color: #667eea;
@@ -80,6 +139,30 @@ body {
 .draggable-item .delete-btn:hover {
     background: rgba(255, 0, 0, 0.7);
 }
+.draggable-item .edit-btn {
+    position: absolute;
+    right: 45px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 12px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+.draggable-item:hover .edit-btn {
+    display: flex;
+}
+.draggable-item .edit-btn:hover {
+    background: rgba(102, 126, 234, 0.7);
+}
 .category-box {
     background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
     color: white;
@@ -102,6 +185,10 @@ body {
     padding-bottom: 10px;
     border-bottom: 2px solid rgba(255, 255, 255, 0.3);
 }
+.category-box .category-buttons {
+    display: flex;
+    align-items: center;
+}
 .category-box .category-title {
     font-weight: 700;
     font-size: 1.1em;
@@ -123,6 +210,24 @@ body {
 .category-box .delete-category-btn:hover {
     background: rgba(255, 0, 0, 0.7);
 }
+.category-box .edit-category-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    margin-right: 11px;
+}
+.category-box .edit-category-btn:hover {
+    background: rgba(102, 126, 234, 0.8);
+}
 .category-box .draggable-item {
     background: rgba(255, 255, 255, 0.95);
     color: #333;
@@ -130,6 +235,20 @@ body {
 }
 .category-box .draggable-item:hover {
     background: white;
+}
+.category-box .draggable-item .edit-btn {
+    background: rgba(40, 40, 40, 0.2);
+    color: white;
+}
+.category-box .draggable-item .edit-btn:hover {
+    background: rgba(102, 126, 234, 1);
+}
+.category-box .draggable-item .delete-btn {
+    background: rgba(30, 30, 30, 0.2);
+    color: white;
+}
+.category-box .draggable-item .delete-btn:hover {
+    background: rgba(255, 0, 0, 1);
 }
 .btn-custom {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -229,4 +348,27 @@ body {
     border-color: #667eea;
     color: white;
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* 撤销/重做按钮样式 */
+.btn-outline-secondary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-outline-secondary:not(:disabled):hover {
+    background: #6c757d;
+    border-color: #6c757d;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
+}
+
+/* 垂直分隔线 */
+.vr {
+    width: 1px;
+    background-color: #dee2e6;
+    margin: 0 10px;
+    height: 38px;
+    align-self: center;
 }

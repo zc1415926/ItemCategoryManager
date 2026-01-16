@@ -8,8 +8,544 @@ let fileHandleInstance = null; // 文件系统API的文件句柄（用于原生�
 let originalFileContent = null; // 原始文件内容（用于检查是否已修改）
 let pendingFileToOpen = null; // 待打开的文件（用于确认后打开）
 
+// 存储当前正在编辑的条目
+let editingItem = null;
+// 存储当前正在编辑的分类
+let editingCategory = null;
+
+// 创建条目元素的辅助函数
+function createItemElement(text, id, container) {
+    const item = document.createElement('div');
+    item.className = 'draggable-item';
+    item.id = id;
+    item.draggable = true;
+    item.textContent = text;
+    
+    // 添加编辑按钮
+    const editBtn = document.createElement('button');
+    editBtn.className = 'edit-btn';
+    editBtn.innerHTML = '✎';
+    editBtn.onclick = function(e) {
+        e.stopPropagation();
+        openEditItemModal(item);
+    };
+    item.appendChild(editBtn);
+    
+    // 添加删除按钮
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'delete-btn';
+    deleteBtn.innerHTML = '×';
+    deleteBtn.onclick = function(e) {
+        e.stopPropagation();
+        elementToDelete = item;
+        deleteType = 'item';
+        document.getElementById('deleteModalLabel').textContent = '确认删除条目';
+        document.getElementById('deleteModalContent').innerHTML = `
+<p>确定要删除以下条目吗？</p>
+<div class="alert alert-warning">
+<strong>${text}</strong>
+</div>
+`;
+        const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+        modal.show();
+    };
+    item.appendChild(deleteBtn);
+    
+    // 拖拽事件
+    item.addEventListener('dragstart', dragStart);
+    item.addEventListener('dragend', dragEnd);
+    
+    return item;
+}
+
+// 打开编辑条目模态框
+function openEditItemModal(item) {
+    editingItem = item;
+    // 只获取第一个文本节点的内容，不包括按钮
+    const currentText = item.firstChild ? item.firstChild.textContent.trim() : '';
+    document.getElementById('editItemInput').value = currentText;
+    const modal = new bootstrap.Modal(document.getElementById('editItemModal'));
+    modal.show();
+}
+
+// 确认编辑条目
+function confirmEditItem() {
+    if (!editingItem) return;
+    
+    const newText = document.getElementById('editItemInput').value.trim();
+    if (newText === '') {
+        showAlert('请输入条目内容！');
+        return;
+    }
+    
+    // 只获取第一个文本节点的内容，不包括按钮
+    const oldText = editingItem.firstChild ? editingItem.firstChild.textContent.trim() : '';
+    const itemId = editingItem.id;
+    const containerId = editingItem.parentNode.id;
+    
+    // 只更新第一个文本节点，保留按钮
+    if (editingItem.firstChild) {
+        editingItem.firstChild.textContent = newText;
+    }
+    
+    // 记录历史
+    historyManager.push({
+        type: 'editItem',
+        data: {
+            id: itemId,
+            oldText: oldText,
+            newText: newText,
+            containerId: containerId
+        }
+    });
+    
+    // 关闭模态框
+    const modal = bootstrap.Modal.getInstance(document.getElementById('editItemModal'));
+    modal.hide();
+    
+    // 清空编辑状态
+    editingItem = null;
+    
+    // 更新文件名显示（显示未保存状态）
+    updateFileNameDisplay();
+}
+
+// 打开编辑分类模态框
+function openEditCategoryModal(category) {
+    editingCategory = category;
+    const categoryName = category.querySelector('.category-title').textContent.split('(')[0].trim();
+    document.getElementById('editCategoryInput').value = categoryName;
+    const modal = new bootstrap.Modal(document.getElementById('editCategoryModal'));
+    modal.show();
+}
+
+// 确认编辑分类
+function confirmEditCategory() {
+    if (!editingCategory) return;
+    
+    const newName = document.getElementById('editCategoryInput').value.trim();
+    if (newName === '') {
+        showAlert('请输入分类名称！');
+        return;
+    }
+    
+    // 获取分类ID和旧名称
+    const categoryId = editingCategory.id;
+    const titleElement = editingCategory.querySelector('.category-title');
+    const oldName = titleElement.firstChild.textContent.split('(')[0].trim();
+    
+    // 更新分类名称（保留计数部分）
+    const countSpan = titleElement.querySelector('.item-count');
+    const countText = countSpan ? countSpan.textContent : '(0)';
+    titleElement.firstChild.textContent = newName + countText;
+    
+    // 记录历史
+    historyManager.push({
+        type: 'editCategory',
+        data: {
+            id: categoryId,
+            oldName: oldName,
+            newName: newName
+        }
+    });
+    
+    // 关闭模态框
+    const modal = bootstrap.Modal.getInstance(document.getElementById('editCategoryModal'));
+    modal.hide();
+    
+    // 清空编辑状态
+    editingCategory = null;
+    
+    // 更新文件名显示（显示未保存状态）
+    updateFileNameDisplay();
+}
+
 // 检测是否在Electron环境中
 const isElectron = typeof window !== 'undefined' && window.electronAPI && window.electronAPI.isElectron;
+
+// 撤销操作
+function undo() {
+    const operation = historyManager.undo();
+    if (!operation) return;
+    
+    executeUndo(operation);
+}
+
+// 重做操作
+function redo() {
+    const operation = historyManager.redo();
+    if (!operation) return;
+    
+    executeRedo(operation);
+}
+
+// 执行撤销
+function executeUndo(operation) {
+    switch (operation.type) {
+        case 'addItem':
+            undoAddItem(operation.data);
+            break;
+        case 'addCategory':
+            undoAddCategory(operation.data);
+            break;
+        case 'deleteItem':
+            undoDeleteItem(operation.data);
+            break;
+        case 'deleteCategory':
+            undoDeleteCategory(operation.data);
+            break;
+        case 'moveItem':
+            undoMoveItem(operation.data);
+            break;
+        case 'editItem':
+            undoEditItem(operation.data);
+            break;
+        case 'editCategory':
+            undoEditCategory(operation.data);
+            break;
+        default:
+            console.warn('未知的操作类型:', operation.type);
+    }
+}
+
+// 执行重做
+function executeRedo(operation) {
+    switch (operation.type) {
+        case 'addItem':
+            redoAddItem(operation.data);
+            break;
+        case 'addCategory':
+            redoAddCategory(operation.data);
+            break;
+        case 'deleteItem':
+            redoDeleteItem(operation.data);
+            break;
+        case 'deleteCategory':
+            redoDeleteCategory(operation.data);
+            break;
+        case 'moveItem':
+            redoMoveItem(operation.data);
+            break;
+        case 'editItem':
+            redoEditItem(operation.data);
+            break;
+        case 'editCategory':
+            redoEditCategory(operation.data);
+            break;
+        default:
+            console.warn('未知的操作类型:', operation.type);
+    }
+}
+
+// 撤销添加条目
+function undoAddItem(data) {
+    const item = document.getElementById(data.id);
+    if (item) {
+        item.remove();
+        checkEmpty();
+        updateFileNameDisplay();
+    }
+}
+
+// 重做添加条目
+function redoAddItem(data) {
+    const container = document.getElementById(data.containerId);
+    if (!container) return;
+    
+    const emptyMessage = document.getElementById('itemEmptyMessage');
+    if (emptyMessage) {
+        emptyMessage.remove();
+    }
+    
+    const item = document.createElement('div');
+    item.className = 'draggable-item';
+    item.id = data.id;
+    item.draggable = true;
+    item.textContent = data.text;
+    
+    // 添加删除按钮
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'delete-btn';
+    deleteBtn.innerHTML = '×';
+    deleteBtn.onclick = function(e) {
+        e.stopPropagation();
+        elementToDelete = item;
+        deleteType = 'item';
+        document.getElementById('deleteModalLabel').textContent = '确认删除条目';
+        document.getElementById('deleteModalContent').innerHTML = `
+<p>确定要删除以下条目吗？</p>
+<div class="alert alert-warning">
+<strong>${data.text}</strong>
+</div>
+`;
+        const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+        modal.show();
+    };
+    item.appendChild(deleteBtn);
+    
+    // 拖拽事件
+    item.addEventListener('dragstart', dragStart);
+    item.addEventListener('dragend', dragEnd);
+    
+    container.appendChild(item);
+    checkEmpty();
+    updateFileNameDisplay();
+}
+
+// 撤销添加分类
+function undoAddCategory(data) {
+    const category = document.getElementById(data.id);
+    if (category) {
+        category.remove();
+        checkCategoryEmpty();
+        updateFileNameDisplay();
+    }
+}
+
+// 重做添加分类
+function redoAddCategory(data) {
+    const container = document.getElementById('categoryContainer');
+    const emptyMessage = document.getElementById('categoryEmptyMessage');
+    if (emptyMessage) {
+        emptyMessage.remove();
+    }
+    
+    const category = createCategoryElement(data.name, data.id, container);
+    container.appendChild(category);
+    checkCategoryEmpty();
+    updateFileNameDisplay();
+}
+
+// 撤销删除条目
+function undoDeleteItem(data) {
+    const container = document.getElementById(data.containerId);
+    if (!container) return;
+    
+    const emptyMessage = document.getElementById('itemEmptyMessage');
+    if (emptyMessage) {
+        emptyMessage.remove();
+    }
+    
+    const item = document.createElement('div');
+    item.className = 'draggable-item';
+    item.id = data.id;
+    item.draggable = true;
+    item.textContent = data.text;
+    
+    // 添加删除按钮
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'delete-btn';
+    deleteBtn.innerHTML = '×';
+    deleteBtn.onclick = function(e) {
+        e.stopPropagation();
+        elementToDelete = item;
+        deleteType = 'item';
+        document.getElementById('deleteModalLabel').textContent = '确认删除条目';
+        document.getElementById('deleteModalContent').innerHTML = `
+<p>确定要删除以下条目吗？</p>
+<div class="alert alert-warning">
+<strong>${data.text}</strong>
+</div>
+`;
+        const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+        modal.show();
+    };
+    item.appendChild(deleteBtn);
+    
+    // 拖拽事件
+    item.addEventListener('dragstart', dragStart);
+    item.addEventListener('dragend', dragEnd);
+    
+    container.appendChild(item);
+    checkEmpty();
+    updateFileNameDisplay();
+}
+
+// 重做删除条目
+function redoDeleteItem(data) {
+    const item = document.getElementById(data.id);
+    if (item) {
+        item.remove();
+        checkEmpty();
+        updateFileNameDisplay();
+    }
+}
+
+// 撤销删除分类
+function undoDeleteCategory(data) {
+    const container = document.getElementById('categoryContainer');
+    const emptyMessage = document.getElementById('categoryEmptyMessage');
+    if (emptyMessage) {
+        emptyMessage.remove();
+    }
+    
+    const category = createCategoryElement(data.name, data.id, container);
+    container.appendChild(category);
+    
+    // 恢复分类中的条目
+    if (data.items && data.items.length > 0) {
+        const categoryItems = category.querySelector('.category-items');
+        data.items.forEach(itemData => {
+            const item = document.createElement('div');
+            item.className = 'draggable-item';
+            item.id = itemData.id;
+            item.draggable = true;
+            item.textContent = itemData.text;
+            
+            // 添加删除按钮
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'delete-btn';
+            deleteBtn.innerHTML = '×';
+            deleteBtn.onclick = function(e) {
+                e.stopPropagation();
+                elementToDelete = item;
+                deleteType = 'item';
+                document.getElementById('deleteModalLabel').textContent = '确认删除条目';
+                document.getElementById('deleteModalContent').innerHTML = `
+<p>确定要删除以下条目吗？</p>
+<div class="alert alert-warning">
+<strong>${itemData.text}</strong>
+</div>
+`;
+                const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+                modal.show();
+            };
+            item.appendChild(deleteBtn);
+            
+            // 拖拽事件
+            item.addEventListener('dragstart', dragStart);
+            item.addEventListener('dragend', dragEnd);
+            
+            categoryItems.appendChild(item);
+        });
+        
+        updateCategoryItemCount(category);
+    }
+    
+    checkCategoryEmpty();
+    updateFileNameDisplay();
+}
+
+// 重做删除分类
+function redoDeleteCategory(data) {
+    const category = document.getElementById(data.id);
+    if (category) {
+        category.remove();
+        checkCategoryEmpty();
+        updateFileNameDisplay();
+    }
+}
+
+// 撤销移动条目
+function undoMoveItem(data) {
+    const item = document.getElementById(data.itemId);
+    if (!item) return;
+    
+    const targetContainer = data.fromContainerId === 'itemContainer' 
+        ? document.getElementById('itemContainer')
+        : document.getElementById(data.fromContainerId)?.querySelector('.category-items');
+    
+    if (targetContainer) {
+        targetContainer.appendChild(item);
+        
+        // 更新分类计数
+        const fromCategory = document.getElementById(data.fromContainerId)?.closest('.category-box');
+        const toCategory = document.getElementById(data.toContainerId)?.closest('.category-box');
+        
+        if (fromCategory) updateCategoryItemCount(fromCategory);
+        if (toCategory) updateCategoryItemCount(toCategory);
+        
+        checkEmpty();
+        updateFileNameDisplay();
+    }
+}
+
+// 重做移动条目
+function redoMoveItem(data) {
+    const item = document.getElementById(data.itemId);
+    if (!item) return;
+    
+    const targetContainer = data.toContainerId === 'itemContainer'
+        ? document.getElementById('itemContainer')
+        : document.getElementById(data.toContainerId)?.querySelector('.category-items');
+    
+    if (targetContainer) {
+        targetContainer.appendChild(item);
+        
+        // 更新分类计数
+        const fromCategory = document.getElementById(data.fromContainerId)?.closest('.category-box');
+        const toCategory = document.getElementById(data.toContainerId)?.closest('.category-box');
+        
+        if (fromCategory) updateCategoryItemCount(fromCategory);
+        if (toCategory) updateCategoryItemCount(toCategory);
+        
+        checkEmpty();
+        updateFileNameDisplay();
+    }
+}
+
+// 撤销编辑条目
+function undoEditItem(data) {
+    const item = document.getElementById(data.id);
+    if (item) {
+        // 恢复旧文本
+        item.childNodes.forEach(node => {
+            if (node.nodeType === Node.TEXT_NODE) {
+                node.textContent = data.oldText;
+            }
+        });
+        updateFileNameDisplay();
+    }
+}
+
+// 重做编辑条目
+function redoEditItem(data) {
+    const item = document.getElementById(data.id);
+    if (item) {
+        // 应用新文本
+        if (item.firstChild) {
+            item.firstChild.textContent = data.newText;
+        }
+        updateFileNameDisplay();
+    }
+}
+
+// 撤销编辑分类
+function undoEditCategory(data) {
+    const category = document.getElementById(data.id);
+    if (category) {
+        const titleElement = category.querySelector('.category-title');
+        const countSpan = titleElement.querySelector('.item-count');
+        const countText = countSpan ? countSpan.textContent : '(0)';
+        titleElement.firstChild.textContent = data.oldName + countText;
+        updateFileNameDisplay();
+    }
+}
+
+// 重做编辑分类
+function redoEditCategory(data) {
+    const category = document.getElementById(data.id);
+    if (category) {
+        const titleElement = category.querySelector('.category-title');
+        const countSpan = titleElement.querySelector('.item-count');
+        const countText = countSpan ? countSpan.textContent : '(0)';
+        titleElement.firstChild.textContent = data.newName + countText;
+        updateFileNameDisplay();
+    }
+}
+
+// 更新撤销/重做按钮状态
+function updateUndoRedoButtons() {
+    const undoBtn = document.getElementById('undoBtn');
+    const redoBtn = document.getElementById('redoBtn');
+    
+    if (undoBtn) {
+        undoBtn.disabled = !historyManager.canUndo();
+    }
+    if (redoBtn) {
+        redoBtn.disabled = !historyManager.canRedo();
+    }
+}
 
 // Electron文件操作API封装
 const electronFileAPI = {
@@ -109,39 +645,84 @@ function addItem() {
     if (emptyMessage) {
         emptyMessage.remove();
     }
-    const item = document.createElement('div');
-    item.className = 'draggable-item';
-    item.id = 'item-' + itemIdCounter++;
-    item.draggable = true;
-    item.textContent = text;
-    // 添加删除按钮
-    const deleteBtn = document.createElement('button');
-    deleteBtn.className = 'delete-btn';
-    deleteBtn.innerHTML = '×';
-    deleteBtn.onclick = function(e) {
-        e.stopPropagation();
-        elementToDelete = item;
-        deleteType = 'item';
-        document.getElementById('deleteModalLabel').textContent = '确认删除条目';
-        document.getElementById('deleteModalContent').innerHTML = `
-<p>确定要删除以下条目吗？</p>
-<div class="alert alert-warning">
-<strong>${text}</strong>
-</div>
-`;
-        const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
-        modal.show();
-    };
-    item.appendChild(deleteBtn);
-    // 拖拽事件
-    item.addEventListener('dragstart', dragStart);
-    item.addEventListener('dragend', dragEnd);
+    
+    const itemId = 'item-' + itemIdCounter++;
+    const item = createItemElement(text, itemId, container);
+    
     container.appendChild(item);
     input.value = '';
+    
+    // 记录历史
+    historyManager.push({
+        type: 'addItem',
+        data: {
+            id: itemId,
+            text: text,
+            containerId: 'itemContainer'
+        }
+    });
+    
     // 更新文件名显示（显示未保存状态）
     updateFileNameDisplay();
 }
 // 添加分类
+// 创建分类元素的辅助函数
+function createCategoryElement(name, id, container) {
+    const category = document.createElement('div');
+    category.className = 'category-box';
+    category.id = id;
+    
+    // 创建分类标题和按钮容器
+    const header = document.createElement('div');
+    header.className = 'category-header';
+    
+    // 创建标题部分
+    const titleSpan = document.createElement('span');
+    titleSpan.className = 'category-title';
+    titleSpan.textContent = name + '(0)';
+    
+    // 创建按钮容器
+    const buttonContainer = document.createElement('span');
+    buttonContainer.className = 'category-buttons';
+    
+    // 添加编辑按钮
+    const editBtn = document.createElement('button');
+    editBtn.className = 'edit-category-btn';
+    editBtn.innerHTML = '✎';
+    editBtn.onclick = function(e) {
+        e.stopPropagation();
+        openEditCategoryModal(category);
+    };
+    buttonContainer.appendChild(editBtn);
+    
+    // 添加删除按钮
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'delete-category-btn';
+    deleteBtn.innerHTML = '×';
+    deleteBtn.onclick = function(e) {
+        e.stopPropagation();
+        deleteCategory(category.id);
+    };
+    buttonContainer.appendChild(deleteBtn);
+    
+    header.appendChild(titleSpan);
+    header.appendChild(buttonContainer);
+    
+    // 创建条目容器
+    const itemsContainer = document.createElement('div');
+    itemsContainer.className = 'category-items';
+    
+    category.appendChild(header);
+    category.appendChild(itemsContainer);
+    
+    // 在整个category-box上绑定拖拽事件
+    category.ondrop = drop;
+    category.ondragover = allowDrop;
+    category.ondragleave = dragLeave;
+    
+    return category;
+}
+
 function addCategory() {
     const input = document.getElementById('categoryInput');
     const name = input.value.trim();
@@ -154,22 +735,21 @@ function addCategory() {
     if (emptyMessage) {
         emptyMessage.remove();
     }
-    const category = document.createElement('div');
-    category.className = 'category-box';
-    category.id = 'category-' + categoryIdCounter++;
-    category.innerHTML = `
-<div class="category-header">
-<span class="category-title">${name}<span class="item-count">(0)</span></span>
-<button class="delete-category-btn" onclick="deleteCategory('${category.id}')">×</button>
-</div>
-<div class="category-items"></div>
-`;
-    // 在整个category-box上绑定拖拽事件
-    category.ondrop = drop;
-    category.ondragover = allowDrop;
-    category.ondragleave = dragLeave;
+    
+    const categoryId = 'category-' + categoryIdCounter++;
+    const category = createCategoryElement(name, categoryId, container);
     container.appendChild(category);
     input.value = '';
+    
+    // 记录历史
+    historyManager.push({
+        type: 'addCategory',
+        data: {
+            id: categoryId,
+            name: name
+        }
+    });
+    
     // 更新文件名显示（显示未保存状态）
     updateFileNameDisplay();
 }
@@ -184,8 +764,12 @@ function deleteCategory(categoryId) {
         const itemContents = Array.from(items).map(item => {
             // 克隆节点以避免修改原始DOM
             const clone = item.cloneNode(true);
-            // 移除删除按钮
+            // 移除编辑按钮和删除按钮
+            const editBtn = clone.querySelector('.edit-btn');
             const deleteBtn = clone.querySelector('.delete-btn');
+            if (editBtn) {
+                editBtn.remove();
+            }
             if (deleteBtn) {
                 deleteBtn.remove();
             }
@@ -215,13 +799,38 @@ ${itemContents}
 // 确认删除
 function confirmDelete() {
     if (!elementToDelete) return;
+    
     if (deleteType === 'item') {
+        // 保存删除前的信息
+        const itemId = elementToDelete.id;
+        const itemText = elementToDelete.textContent.trim();
+        const containerId = elementToDelete.parentNode.id;
+        
         elementToDelete.remove();
         checkEmpty();
+        
+        // 记录历史
+        historyManager.push({
+            type: 'deleteItem',
+            data: {
+                id: itemId,
+                text: itemText,
+                containerId: containerId
+            }
+        });
     } else if (deleteType === 'category') {
         const category = elementToDelete;
-        // 将分类中的所有条目移回左侧
+        
+        // 保存删除前的信息
+        const categoryId = category.id;
+        const categoryName = category.querySelector('.category-title').textContent.split('(')[0].trim();
         const items = category.querySelectorAll('.draggable-item');
+        const itemsData = Array.from(items).map(item => ({
+            id: item.id,
+            text: item.textContent.trim()
+        }));
+        
+        // 将分类中的所有条目移回左侧
         const itemContainer = document.getElementById('itemContainer');
         items.forEach(item => {
             itemContainer.appendChild(item);
@@ -229,7 +838,18 @@ function confirmDelete() {
         category.remove();
         checkCategoryEmpty();
         checkEmpty();
+        
+        // 记录历史
+        historyManager.push({
+            type: 'deleteCategory',
+            data: {
+                id: categoryId,
+                name: categoryName,
+                items: itemsData
+            }
+        });
     }
+    
     elementToDelete = null;
     deleteType = null;
     // 关闭模态框
@@ -391,8 +1011,12 @@ function importItems(items) {
     const existingItems = Array.from(container.querySelectorAll('.draggable-item')).map(item => {
         // 克隆节点以避免修改原始DOM
         const clone = item.cloneNode(true);
-        // 移除删除按钮
+        // 移除编辑按钮和删除按钮
+        const editBtn = clone.querySelector('.edit-btn');
         const deleteBtn = clone.querySelector('.delete-btn');
+        if (editBtn) {
+            editBtn.remove();
+        }
         if (deleteBtn) {
             deleteBtn.remove();
         }
@@ -415,34 +1039,10 @@ function importItems(items) {
         if (emptyMessage) {
             emptyMessage.remove();
         }
+        
         // 创建条目
-        const item = document.createElement('div');
-        item.className = 'draggable-item';
-        item.id = 'item-' + itemIdCounter++;
-        item.draggable = true;
-        item.textContent = trimmedText;
-        // 添加删除按钮
-        const deleteBtn = document.createElement('button');
-        deleteBtn.className = 'delete-btn';
-        deleteBtn.innerHTML = '×';
-        deleteBtn.onclick = function(e) {
-            e.stopPropagation();
-            elementToDelete = item;
-            deleteType = 'item';
-            document.getElementById('deleteModalLabel').textContent = '确认删除条目';
-            document.getElementById('deleteModalContent').innerHTML = `
-<p>确定要删除以下条目吗？</p>
-<div class="alert alert-warning">
-<strong>${trimmedText}</strong>
-</div>
-`;
-            const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
-            modal.show();
-        };
-        item.appendChild(deleteBtn);
-        // 拖拽事件
-        item.addEventListener('dragstart', dragStart);
-        item.addEventListener('dragend', dragEnd);
+        const itemId = 'item-' + itemIdCounter++;
+        const item = createItemElement(trimmedText, itemId, container);
         container.appendChild(item);
         successCount++;
     });
@@ -469,8 +1069,12 @@ function importCategories(categories) {
     const existingItems = Array.from(itemContainer.querySelectorAll('.draggable-item')).map(item => {
         // 克隆节点以避免修改原始DOM
         const clone = item.cloneNode(true);
-        // 移除删除按钮
+        // 移除编辑按钮和删除按钮
+        const editBtn = clone.querySelector('.edit-btn');
         const deleteBtn = clone.querySelector('.delete-btn');
+        if (editBtn) {
+            editBtn.remove();
+        }
         if (deleteBtn) {
             deleteBtn.remove();
         }
@@ -495,21 +1099,10 @@ function importCategories(categories) {
         if (emptyMessage) {
             emptyMessage.remove();
         }
+        
         // 创建分类
-        const category = document.createElement('div');
-        category.className = 'category-box';
-        category.id = 'category-' + categoryIdCounter++;
-        category.innerHTML = `
-<div class="category-header">
-<span class="category-title">${name}<span class="item-count">(0)</span></span>
-<button class="delete-category-btn" onclick="deleteCategory('${category.id}')">×</button>
-</div>
-<div class="category-items"></div>
-`;
-        // 在整个category-box上绑定拖拽事件
-        category.ondrop = drop;
-        category.ondragover = allowDrop;
-        category.ondragleave = dragLeave;
+        const categoryId = 'category-' + categoryIdCounter++;
+        const category = createCategoryElement(name, categoryId, container);
         container.appendChild(category);
         // 如果分类中有条目，添加到分类中
         if (categoryData.items && Array.isArray(categoryData.items)) {
@@ -526,33 +1119,8 @@ function importCategories(categories) {
                     return;
                 }
                 // 创建条目
-                const item = document.createElement('div');
-                item.className = 'draggable-item';
-                item.id = 'item-' + itemIdCounter++;
-                item.draggable = true;
-                item.textContent = trimmedItemText;
-                // 添加删除按钮
-                const deleteBtn = document.createElement('button');
-                deleteBtn.className = 'delete-btn';
-                deleteBtn.innerHTML = '×';
-                deleteBtn.onclick = function(e) {
-                    e.stopPropagation();
-                    elementToDelete = item;
-                    deleteType = 'item';
-                    document.getElementById('deleteModalLabel').textContent = '确认删除条目';
-                    document.getElementById('deleteModalContent').innerHTML = `
-<p>确定要删除以下条目吗？</p>
-<div class="alert alert-warning">
-<strong>${trimmedItemText}</strong>
-</div>
-`;
-                    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
-                    modal.show();
-                };
-                item.appendChild(deleteBtn);
-                // 拖拽事件
-                item.addEventListener('dragstart', dragStart);
-                item.addEventListener('dragend', dragEnd);
+                const itemId = 'item-' + itemIdCounter++;
+                const item = createItemElement(trimmedItemText, itemId, categoryItems);
                 categoryItems.appendChild(item);
                 itemSuccessCount++;
             });
@@ -619,10 +1187,18 @@ function drop(e) {
     const itemId = e.dataTransfer.getData('text/plain');
     const item = document.getElementById(itemId);
     if (!item) return;
+    
+    // 保存原始位置信息
+    const fromContainerId = item.parentNode.id === 'itemContainer' 
+        ? 'itemContainer' 
+        : item.parentNode.closest('.category-box').id;
+    
     // 检查条目原来所在的分类框（如果有的话）
     const oldParentCategory = item.closest('.category-box');
     // 查找目标容器
     let target = e.target;
+    let targetContainerId = null;
+    
     // 向上查找最近的分类框或条目容器
     while (target) {
         if (target.classList && target.classList.contains('category-box')) {
@@ -630,6 +1206,7 @@ function drop(e) {
             const categoryItems = target.querySelector('.category-items');
             if (categoryItems) {
                 categoryItems.appendChild(item);
+                targetContainerId = target.id;
                 updateCategoryItemCount(target);
                 // 如果是从另一个分类框拖过来的，更新原来分类框的计数
                 if (oldParentCategory && oldParentCategory !== target) {
@@ -640,6 +1217,7 @@ function drop(e) {
         } else if (target.id === 'itemContainer') {
             // 找到条目容器
             target.appendChild(item);
+            targetContainerId = 'itemContainer';
             // 如果是从分类框拖过来的，更新原来分类框的计数
             if (oldParentCategory) {
                 updateCategoryItemCount(oldParentCategory);
@@ -648,6 +1226,19 @@ function drop(e) {
         }
         target = target.parentElement;
     }
+    
+    // 如果位置发生了变化，记录历史
+    if (targetContainerId && targetContainerId !== fromContainerId) {
+        historyManager.push({
+            type: 'moveItem',
+            data: {
+                itemId: itemId,
+                fromContainerId: fromContainerId,
+                toContainerId: targetContainerId
+            }
+        });
+    }
+    
     checkEmpty();
     checkCategoryEmpty();
     // 更新文件名显示（显示未保存状态）
@@ -731,7 +1322,11 @@ function collectCurrentData() {
         const items = Array.from(itemContainer.querySelectorAll('.draggable-item'))
             .map(item => {
                 const clone = item.cloneNode(true);
+                const editBtn = clone.querySelector('.edit-btn');
                 const deleteBtn = clone.querySelector('.delete-btn');
+                if (editBtn) {
+                    editBtn.remove();
+                }
                 if (deleteBtn) {
                     deleteBtn.remove();
                 }
@@ -755,7 +1350,11 @@ function collectCurrentData() {
                 const categoryItems = Array.from(category.querySelectorAll('.draggable-item'))
                     .map(item => {
                         const clone = item.cloneNode(true);
+                        const editBtn = clone.querySelector('.edit-btn');
                         const deleteBtn = clone.querySelector('.delete-btn');
+                        if (editBtn) {
+                            editBtn.remove();
+                        }
                         if (deleteBtn) {
                             deleteBtn.remove();
                         }
@@ -1106,36 +1705,8 @@ function openFileDirectly(file) {
             // 加载条目
             data.items.forEach(itemText => {
                 if (typeof itemText === 'string' && itemText.trim() !== '') {
-                    const item = document.createElement('div');
-                    item.className = 'draggable-item';
-                    item.id = 'item-' + itemIdCounter++;
-                    item.draggable = true;
-                    item.textContent = itemText.trim();
-
-                    // 添加删除按钮
-                    const deleteBtn = document.createElement('button');
-                    deleteBtn.className = 'delete-btn';
-                    deleteBtn.innerHTML = '×';
-                    deleteBtn.onclick = function(e) {
-                        e.stopPropagation();
-                        elementToDelete = item;
-                        deleteType = 'item';
-                        document.getElementById('deleteModalLabel').textContent = '确认删除条目';
-                        document.getElementById('deleteModalContent').innerHTML = `
-                            <p>确定要删除以下条目吗？</p>
-                            <div class="alert alert-warning">
-                                <strong>${itemText.trim()}</strong>
-                            </div>
-                        `;
-                        const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
-                        modal.show();
-                    };
-                    item.appendChild(deleteBtn);
-
-                    // 拖拽事件
-                    item.addEventListener('dragstart', dragStart);
-                    item.addEventListener('dragend', dragEnd);
-
+                    const itemId = 'item-' + itemIdCounter++;
+                    const item = createItemElement(itemText.trim(), itemId, itemContainer);
                     itemContainer.appendChild(item);
                 }
             });
@@ -1143,23 +1714,8 @@ function openFileDirectly(file) {
             // 加载分类
             data.categories.forEach(categoryData => {
                 if (categoryData.name && typeof categoryData.name === 'string') {
-                    const category = document.createElement('div');
-                    category.className = 'category-box';
-                    category.id = 'category-' + categoryIdCounter++;
-
-                    category.innerHTML = `
-                        <div class="category-header">
-                            <span class="category-title">${categoryData.name}<span class="item-count">(0)</span></span>
-                            <button class="delete-category-btn" onclick="deleteCategory('${category.id}')">×</button>
-                        </div>
-                        <div class="category-items"></div>
-                    `;
-
-                    // 在整个category-box上绑定拖拽事件
-                    category.ondrop = drop;
-                    category.ondragover = allowDrop;
-                    category.ondragleave = dragLeave;
-
+                    const categoryId = 'category-' + categoryIdCounter++;
+                    const category = createCategoryElement(categoryData.name, categoryId, categoryContainer);
                     categoryContainer.appendChild(category);
 
                     // 加载分类中的条目
@@ -1167,36 +1723,8 @@ function openFileDirectly(file) {
                         const categoryItems = category.querySelector('.category-items');
                         categoryData.items.forEach(itemText => {
                             if (typeof itemText === 'string' && itemText.trim() !== '') {
-                                const item = document.createElement('div');
-                                item.className = 'draggable-item';
-                                item.id = 'item-' + itemIdCounter++;
-                                item.draggable = true;
-                                item.textContent = itemText.trim();
-
-                                // 添加删除按钮
-                                const deleteBtn = document.createElement('button');
-                                deleteBtn.className = 'delete-btn';
-                                deleteBtn.innerHTML = '×';
-                                deleteBtn.onclick = function(e) {
-                                    e.stopPropagation();
-                                    elementToDelete = item;
-                                    deleteType = 'item';
-                                    document.getElementById('deleteModalLabel').textContent = '确认删除条目';
-                                    document.getElementById('deleteModalContent').innerHTML = `
-                                        <p>确定要删除以下条目吗？</p>
-                                        <div class="alert alert-warning">
-                                            <strong>${itemText.trim()}</strong>
-                                        </div>
-                                    `;
-                                    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
-                                    modal.show();
-                                };
-                                item.appendChild(deleteBtn);
-
-                                // 拖拽事件
-                                item.addEventListener('dragstart', dragStart);
-                                item.addEventListener('dragend', dragEnd);
-
+                                const itemId = 'item-' + itemIdCounter++;
+                                const item = createItemElement(itemText.trim(), itemId, categoryItems);
                                 categoryItems.appendChild(item);
                             }
                         });
@@ -1245,8 +1773,12 @@ async function saveFile() {
             .map(item => {
                 // 克隆节点以避免修改原始DOM
                 const clone = item.cloneNode(true);
-                // 移除删除按钮
+                // 移除编辑按钮和删除按钮
+                const editBtn = clone.querySelector('.edit-btn');
                 const deleteBtn = clone.querySelector('.delete-btn');
+                if (editBtn) {
+                    editBtn.remove();
+                }
                 if (deleteBtn) {
                     deleteBtn.remove();
                 }
@@ -1263,8 +1795,12 @@ async function saveFile() {
                 .map(item => {
                     // 克隆节点以避免修改原始DOM
                     const clone = item.cloneNode(true);
-                    // 移除删除按钮
+                    // 移除编辑按钮和删除按钮
+                    const editBtn = clone.querySelector('.edit-btn');
                     const deleteBtn = clone.querySelector('.delete-btn');
+                    if (editBtn) {
+                        editBtn.remove();
+                    }
                     if (deleteBtn) {
                         deleteBtn.remove();
                     }
@@ -1369,8 +1905,12 @@ async function saveAs() {
         .map(item => {
             // 克隆节点以避免修改原始DOM
             const clone = item.cloneNode(true);
-            // 移除删除按钮
+            // 移除编辑按钮和删除按钮
+            const editBtn = clone.querySelector('.edit-btn');
             const deleteBtn = clone.querySelector('.delete-btn');
+            if (editBtn) {
+                editBtn.remove();
+            }
             if (deleteBtn) {
                 deleteBtn.remove();
             }
@@ -1387,8 +1927,12 @@ async function saveAs() {
                 .map(item => {
                     // 克隆节点以避免修改原始DOM
                     const clone = item.cloneNode(true);
-                    // 移除删除按钮
+                    // 移除编辑按钮和删除按钮
+                    const editBtn = clone.querySelector('.edit-btn');
                     const deleteBtn = clone.querySelector('.delete-btn');
+                    if (editBtn) {
+                        editBtn.remove();
+                    }
                     if (deleteBtn) {
                         deleteBtn.remove();
                     }
@@ -1423,25 +1967,28 @@ async function saveAs() {
 
             // 显示保存文件对话框
             const filePath = await electronFileAPI.saveFileDialog(defaultFileName);
-            if (filePath) {
-                const result = await electronFileAPI.saveFile(filePath, jsonString);
-                if (result.success) {
-                    // 更新文件信息
-                    currentFilePath = filePath;
-                    currentFileName = filePath.split('/').pop().split('\\').pop();
-                    fileHandleInstance = null;
-                    
-                    // 更新原始文件内容
-                    originalFileContent = jsonString;
-                    
-                    // 更新文件名显示
-                    updateFileNameDisplay();
-                    showAlertToast('文件另存为成功！');
-                    return;
-                } else {
-                    showAlert('保存失败: ' + result.error);
-                    return;
-                }
+            if (!filePath) {
+                // 用户取消了保存，不显示错误消息
+                return;
+            }
+            
+            const result = await electronFileAPI.saveFile(filePath, jsonString);
+            if (result.success) {
+                // 更新文件信息
+                currentFilePath = filePath;
+                currentFileName = filePath.split('/').pop().split('\\').pop();
+                fileHandleInstance = null;
+                
+                // 更新原始文件内容
+                originalFileContent = jsonString;
+                
+                // 更新文件名显示
+                updateFileNameDisplay();
+                showAlertToast('文件另存为成功！');
+                return;
+            } else {
+                showAlert('保存失败: ' + result.error);
+                return;
             }
         } catch (error) {
             console.error('Electron保存文件失败:', error);
@@ -1490,12 +2037,12 @@ async function saveAs() {
             return;
         } catch (err) {
             // 用户取消或出错
-            if (err.name !== 'AbortError') {
-                console.error('保存文件失败:', err);
-                showAlert('保存文件失败，将使用传统下载方式');
-            } else {
-                return; // 用户取消，不继续
+            if (err.name === 'AbortError') {
+                // 用户取消了保存，直接返回
+                return;
             }
+            console.error('保存文件失败:', err);
+            showAlert('保存文件失败，将使用传统下载方式');
         }
     }
 
@@ -1525,25 +2072,48 @@ async function saveAs() {
 
 // 更新文件名显示
 function updateFileNameDisplay() {
-    const fileNameElement = document.getElementById('currentFileName');
     if (currentFileName) {
         // 检查是否有未保存的修改
         const modified = isContentModified();
         const prefix = modified ? '● ' : '';
         
-        fileNameElement.textContent = '当前文件: ' + prefix + currentFileName;
-        fileNameElement.style.color = modified ? '#e74c3c' : '#667eea';
-        fileNameElement.style.fontWeight = modified ? '700' : '600';
+        // 更新窗口标题
+        if (isElectron) {
+            window.electronAPI.updateWindowTitle(prefix + currentFileName + ' - 条目分类管理器');
+        }
     } else {
-        fileNameElement.textContent = '未命名文件';
-        fileNameElement.style.color = '#adb5bd';
-        fileNameElement.style.fontWeight = '400';
+        // 未命名文件
+        if (isElectron) {
+            window.electronAPI.updateWindowTitle('条目分类管理器');
+        }
     }
 }
 
 // 页面加载时初始化文件名显示
 document.addEventListener('DOMContentLoaded', function() {
     try {
+        // 初始化历史管理器
+        historyManager.restore();
+        historyManager.onStateChange = updateUndoRedoButtons;
+        updateUndoRedoButtons();
+        
+        // 初始化窗口标题
+        updateFileNameDisplay();
+        
+        // 添加快捷键支持
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+                e.preventDefault();
+                if (e.shiftKey) {
+                    // Ctrl+Shift+Z: 重做
+                    redo();
+                } else {
+                    // Ctrl+Z: 撤销
+                    undo();
+                }
+            }
+        });
+        
         updateFileNameDisplay();
         
         // 绑定确认新建按钮事件

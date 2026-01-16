@@ -9,29 +9,37 @@
 </head>
 <body>
     <div class="container-fluid">
-        <h1 class="text-center mb-4" style="font-weight: 800; color: #667eea;">
-            📝 条目分类管理器
-        </h1>
-
-        <!-- 当前文件名显示 -->
-        <div class="text-center mb-3">
-            <small class="text-muted" id="currentFileName">未命名文件</small>
-        </div>
-
-        <!-- 文件操作按钮组 -->
-        <div class="mb-4 d-flex justify-content-center gap-2">
-            <button class="btn btn-outline-primary" onclick="newFile()">
-                📄 新建
-            </button>
-            <button class="btn btn-outline-primary" onclick="openFile()">
-                📂 打开
-            </button>
-            <button class="btn btn-outline-primary" onclick="saveFile()">
-                💾 保存
-            </button>
-            <button class="btn btn-outline-primary" onclick="saveAs()">
-                💾 另存为
-            </button>
+        <!-- 工具栏 -->
+        <div class="toolbar mb-4">
+            <div class="toolbar-group">
+                <button class="toolbar-btn" onclick="newFile()" title="新建文件 (Ctrl+N)">
+                    <span class="toolbar-icon">📄</span>
+                    <span class="toolbar-text">新建</span>
+                </button>
+                <button class="toolbar-btn" onclick="openFile()" title="打开文件 (Ctrl+O)">
+                    <span class="toolbar-icon">📂</span>
+                    <span class="toolbar-text">打开</span>
+                </button>
+                <button class="toolbar-btn" onclick="saveFile()" title="保存文件 (Ctrl+S)">
+                    <span class="toolbar-icon">💾</span>
+                    <span class="toolbar-text">保存</span>
+                </button>
+                <button class="toolbar-btn" onclick="saveAs()" title="另存为 (Ctrl+Shift+S)">
+                    <span class="toolbar-icon">💾</span>
+                    <span class="toolbar-text">另存为</span>
+                </button>
+            </div>
+            <div class="toolbar-divider"></div>
+            <div class="toolbar-group">
+                <button class="toolbar-btn" id="undoBtn" onclick="undo()" disabled title="撤销 (Ctrl+Z)">
+                    <span class="toolbar-icon">↶</span>
+                    <span class="toolbar-text">撤销</span>
+                </button>
+                <button class="toolbar-btn" id="redoBtn" onclick="redo()" disabled title="重做 (Ctrl+Shift+Z)">
+                    <span class="toolbar-icon">↷</span>
+                    <span class="toolbar-text">重做</span>
+                </button>
+            </div>
             <input type="file" id="fileInput" accept=".json" style="display: none;" onchange="handleFileOpen(event)">
         </div>
 
@@ -214,7 +222,52 @@
         </div>
     </div>
 
+    <!-- 编辑条目模态框 -->
+    <div class="modal fade" id="editItemModal" tabindex="-1" aria-labelledby="editItemModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editItemModalLabel">编辑条目</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="editItemInput" class="form-label">条目内容：</label>
+                        <input type="text" class="form-control" id="editItemInput" placeholder="请输入条目内容">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="confirmEditItem()">确定</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 编辑分类模态框 -->
+    <div class="modal fade" id="editCategoryModal" tabindex="-1" aria-labelledby="editCategoryModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editCategoryModalLabel">编辑分类</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="editCategoryInput" class="form-label">分类名称：</label>
+                        <input type="text" class="form-control" id="editCategoryInput" placeholder="请输入分类名称">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="confirmEditCategory()">确定</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="assets/js/bootstrap.bundle.min.js"></script>
+    <script src="history.js"></script>
     <script src="main.js"></script>
 </body>
 </html>
