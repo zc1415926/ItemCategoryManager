@@ -2081,15 +2081,27 @@ function updateFileNameDisplay() {
         // 检查是否有未保存的修改
         const modified = isContentModified();
         const prefix = modified ? '● ' : '';
-        
+
         // 更新窗口标题
         if (isElectron) {
             window.electronAPI.updateWindowTitle(prefix + currentFileName + ' - 条目分类管理器');
+        }
+
+        // 更新文件状态元素（用于测试）
+        const fileStatusElement = document.getElementById('fileStatus');
+        if (fileStatusElement) {
+            fileStatusElement.textContent = prefix + currentFileName;
         }
     } else {
         // 未命名文件
         if (isElectron) {
             window.electronAPI.updateWindowTitle('条目分类管理器');
+        }
+
+        // 更新文件状态元素（用于测试）
+        const fileStatusElement = document.getElementById('fileStatus');
+        if (fileStatusElement) {
+            fileStatusElement.textContent = '未命名';
         }
     }
 }

@@ -2,8 +2,15 @@ const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
-// 开发环境自动重载
-if (process.env.NODE_ENV !== 'production') {
+// 测试模式：用于自动化测试，跳过系统对话框
+const TEST_MODE = process.env.TEST_MODE === 'true';
+
+// 测试模式下的文件路径缓存
+let testModeOpenFilePath = null;
+let testModeSaveFilePath = null;
+
+// 开发环境自动重载（测试模式下禁用）
+if (process.env.NODE_ENV !== 'production' && !TEST_MODE) {
     try {
         require('electron-reload')(__dirname, {
             // Electron 可执行文件路径
@@ -29,6 +36,8 @@ if (process.env.NODE_ENV !== 'production') {
     } catch (e) {
         console.log('electron-reload not found');
     }
+} else if (TEST_MODE) {
+    console.log('✓ 测试模式已启用 - electron-reload 已禁用');
 }
 
 let mainWindow;
@@ -73,19 +82,29 @@ app.on('activate', () => {
 
 // 打开文件对话框
 ipcMain.handle('open-file-dialog', async () => {
-    const result = await dialog.showOpenDialog(mainWindow, {
-        properties: ['openFile'],
-        filters: [
-            { name: 'JSON Files', extensions: ['json'] },
-            { name: 'All Files', extensions: ['*'] }
-        ]
-    });
+    let filePath;
 
-    if (result.canceled || result.filePaths.length === 0) {
-        return null;
+    if (TEST_MODE && testModeOpenFilePath) {
+        // 测试模式：使用缓存的文件路径
+        filePath = testModeOpenFilePath;
+        console.log(`[TEST MODE] 使用缓存的打开文件路径: ${filePath}`);
+    } else {
+        // 正常模式：显示系统对话框
+        const result = await dialog.showOpenDialog(mainWindow, {
+            properties: ['openFile'],
+            filters: [
+                { name: 'JSON Files', extensions: ['json'] },
+                { name: 'All Files', extensions: ['*'] }
+            ]
+        });
+
+        if (result.canceled || result.filePaths.length === 0) {
+            return null;
+        }
+
+        filePath = result.filePaths[0];
     }
 
-    const filePath = result.filePaths[0];
     try {
         const content = fs.readFileSync(filePath, 'utf-8');
         return {
@@ -100,19 +119,30 @@ ipcMain.handle('open-file-dialog', async () => {
 
 // 保存文件对话框
 ipcMain.handle('save-file-dialog', async (event, defaultName) => {
-    const result = await dialog.showSaveDialog(mainWindow, {
-        defaultPath: defaultName || '未命名.json',
-        filters: [
-            { name: 'JSON Files', extensions: ['json'] },
-            { name: 'All Files', extensions: ['*'] }
-        ]
-    });
+    let filePath;
 
-    if (result.canceled || !result.filePath) {
-        return null;
+    if (TEST_MODE && testModeSaveFilePath) {
+        // 测试模式：使用缓存的文件路径
+        filePath = testModeSaveFilePath;
+        console.log(`[TEST MODE] 使用缓存的保存文件路径: ${filePath}`);
+    } else {
+        // 正常模式：显示系统对话框
+        const result = await dialog.showSaveDialog(mainWindow, {
+            defaultPath: defaultName || '未命名.json',
+            filters: [
+                { name: 'JSON Files', extensions: ['json'] },
+                { name: 'All Files', extensions: ['*'] }
+            ]
+        });
+
+        if (result.canceled || !result.filePath) {
+            return null;
+        }
+
+        filePath = result.filePath;
     }
 
-    return result.filePath;
+    return filePath;
 });
 
 // 保存文件
@@ -140,4 +170,42 @@ ipcMain.on('update-window-title', (event, title) => {
     if (mainWindow) {
         mainWindow.setTitle(title || '条目分类管理器');
     }
+});
+
+// ==================== 测试模式专用 IPC handlers ====================
+
+// 设置测试模式下的打开文件路径
+ipcMain.handle('test-set-open-file-path', (event, filePath) => {
+    if (!TEST_MODE) {
+        throw new Error('此功能仅在测试模式下可用');
+    }
+    testModeOpenFilePath = filePath;
+    console.log(`[TEST MODE] 设置打开文件路径: ${filePath}`);
+    return { success: true };
+});
+
+// 设置测试模式下的保存文件路径
+ipcMain.handle('test-set-save-file-path', (event, filePath) => {
+    if (!TEST_MODE) {
+        throw new Error('此功能仅在测试模式下可用');
+    }
+    testModeSaveFilePath = filePath;
+    console.log(`[TEST MODE] 设置保存文件路径: ${filePath}`);
+    return { success: true };
+});
+
+// 清除测试模式下的文件路径
+ipcMain.handle('test-clear-file-paths', () => {
+    if (!TEST_MODE) {
+        throw new Error('此功能仅在测试模式下可用');
+    }
+    testModeOpenFilePath = null;
+    testModeSaveFilePath = null;
+    console.log('[TEST MODE] 清除文件路径');
+    return { success: true };
+});
+
+// 获取测试模式状态
+ipcMain.handle('test-get-mode', () => {
+    return { testMode: TEST_MODE };
 });
