@@ -13,3 +13,9 @@ dist/
 *.asar
 out/
 build/
+
+# Playwright 测试相关
+playwright-report/
+test-results/
+temp/
+playwright/.cache/
