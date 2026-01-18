@@ -2,7 +2,7 @@
   "name": "item-manager",
   "version": "1.0.0",
   "description": "条目分类管理器",
-  "main": "electron-main.js",
+  "main": "src/electron-main.js",
   "scripts": {
     "start": "electron .",
     "build": "electron-builder",
@@ -31,12 +31,9 @@
       "output": "dist"
     },
     "files": [
-      "index.html",
-      "main.js",
-      "style.css",
+      "src/**/*",
       "assets/**/*",
-      "electron-main.js",
-      "preload.js"
+      "icon.png"
     ],
     "win": {
       "target": "nsis",

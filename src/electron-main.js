@@ -12,9 +12,9 @@ let testModeSaveFilePath = null;
 // 开发环境自动重载（测试模式下禁用）
 if (process.env.NODE_ENV !== 'production' && !TEST_MODE) {
     try {
-        require('electron-reload')(__dirname, {
+        require('electron-reload')(path.join(__dirname, '..'), {
             // Electron 可执行文件路径
-            electron: path.join(__dirname, 'node_modules', '.bin', 'electron'),
+            electron: path.join(__dirname, '..', 'node_modules', '.bin', 'electron'),
             // 重载方式: 'reload' - 仅重载渲染进程，更快
             hardResetMethod: 'reload',
             // 启用详细日志输出
@@ -54,10 +54,10 @@ function createWindow() {
             contextIsolation: true,
             nodeIntegration: false
         },
-        icon: path.join(__dirname, 'icon.png')
+        icon: path.join(__dirname, '../icon.png')
     });
 
-    mainWindow.loadFile('index.html');
+    mainWindow.loadFile(path.join(__dirname, 'index.html'));
 
     mainWindow.on('closed', () => {
         mainWindow = null;
