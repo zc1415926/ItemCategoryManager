@@ -515,3 +515,32 @@ mark.search-highlight.current {
     height: 38px;
     align-self: center;
 }
+
+/* HTML5 Sortable 排序样式 */
+.sortable-ghost {
+    opacity: 0.4;
+    background: rgba(102, 126, 234, 0.1);
+    border: 2px dashed #667eea;
+}
+
+.sortable-drag {
+    opacity: 0.8;
+    cursor: grabbing;
+    transform: scale(1.05);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+/* 分类框拖拽样式 */
+.category-box.sortable-ghost {
+    opacity: 0.5;
+    background: linear-gradient(135deg, rgba(240, 147, 251, 0.3) 0%, rgba(245, 87, 108, 0.3) 100%);
+    border: 2px dashed #f093fb;
+}
+
+.category-box.sortable-drag {
+    opacity: 0.9;
+    cursor: grabbing;
+    transform: scale(1.02);
+    box-shadow: 0 12px 35px rgba(240, 147, 251, 0.5);
+    z-index: 1000;
+}

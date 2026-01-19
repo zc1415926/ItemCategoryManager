@@ -726,7 +726,14 @@ function createCategoryElement(name, id, container) {
     category.appendChild(header);
     category.appendChild(itemsContainer);
     
-    // 在整个category-box上绑定拖拽事件
+    // 设置分类框可拖拽
+    category.draggable = true;
+    
+    // 添加拖拽事件
+    category.addEventListener('dragstart', dragStart);
+    category.addEventListener('dragend', dragEnd);
+    
+    // 在整个category-box上绑定拖拽事件（用于接收拖入的条目）
     category.ondrop = drop;
     category.ondragover = allowDrop;
     category.ondragleave = dragLeave;
@@ -1159,13 +1166,21 @@ function importCategories(categories) {
 }
 // 拖拽开始
 function dragStart(e) {
-    e.target.classList.add('dragging');
-    e.dataTransfer.setData('text/plain', e.target.id);
-    e.dataTransfer.effectAllowed = 'move';
+    // 获取真正的拖拽元素（可能是分类框或条目）
+    const dragElement = e.target.closest('.draggable-item, .category-box');
+    if (dragElement) {
+        dragElement.classList.add('dragging');
+        e.dataTransfer.setData('text/plain', dragElement.id);
+        e.dataTransfer.effectAllowed = 'move';
+    }
 }
 // 拖拽结束
 function dragEnd(e) {
-    e.target.classList.remove('dragging');
+    // 获取真正的拖拽元素
+    const dragElement = e.target.closest('.draggable-item, .category-box');
+    if (dragElement) {
+        dragElement.classList.remove('dragging');
+    }
     // 移除所有drag-over类
     document.querySelectorAll('.drag-over').forEach(el => {
         el.classList.remove('drag-over');
@@ -1195,14 +1210,22 @@ function drop(e) {
     document.querySelectorAll('.drag-over').forEach(el => {
         el.classList.remove('drag-over');
     });
+    
     const itemId = e.dataTransfer.getData('text/plain');
+    if (!itemId) return;
+    
     const item = document.getElementById(itemId);
     if (!item) return;
     
     // 保存原始位置信息
-    const fromContainerId = item.parentNode.id === 'itemContainer' 
+    const parentNode = item.parentNode;
+    if (!parentNode) return;
+    
+    const fromContainerId = parentNode.id === 'itemContainer' 
         ? 'itemContainer' 
-        : item.parentNode.closest('.category-box').id;
+        : parentNode.closest('.category-box')?.id;
+    
+    if (!fromContainerId) return;
     
     // 检查条目原来所在的分类框（如果有的话）
     const oldParentCategory = item.closest('.category-box');
@@ -2674,3 +2697,158 @@ document.getElementById('saveAndExitBtn').addEventListener('click', async functi
         window.electronAPI.sendAppQuit();
     }
 });
+
+// 初始化 HTML5 Sortable
+function initSortable() {
+    // 检查 HTML5 Sortable 是否可用
+    if (typeof Sortable === 'undefined') {
+        console.warn('HTML5 Sortable 库未加载，排序功能不可用');
+        return;
+    }
+
+    // 1. 条目容器排序
+    const itemContainer = document.getElementById('itemContainer');
+    if (itemContainer) {
+        new Sortable(itemContainer, {
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            dragClass: 'sortable-drag',
+            handle: '.draggable-item',
+            onEnd: function(evt) {
+                // 记录排序历史
+                const item = evt.item;
+                const newIndex = evt.newIndex;
+                const oldIndex = evt.oldIndex;
+                
+                // 获取条目文本
+                const itemText = item.textContent.trim();
+                const itemId = item.id;
+                
+                // 记录历史
+                historyManager.push({
+                    type: 'reorderItem',
+                    data: {
+                        id: itemId,
+                        text: itemText,
+                        oldIndex: oldIndex,
+                        newIndex: newIndex,
+                        containerId: 'itemContainer'
+                    }
+                });
+                
+                // 更新文件名显示
+                updateFileNameDisplay();
+            }
+        });
+    }
+
+    // 2. 分类容器排序
+    const categoryContainer = document.getElementById('categoryContainer');
+    if (categoryContainer) {
+        new Sortable(categoryContainer, {
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            dragClass: 'sortable-drag',
+            handle: '.category-box',
+            onEnd: function(evt) {
+                // 记录排序历史
+                const category = evt.item;
+                const newIndex = evt.newIndex;
+                const oldIndex = evt.oldIndex;
+                
+                // 获取分类名称
+                const categoryName = category.querySelector('.category-title').textContent.split('(')[0].trim();
+                const categoryId = category.id;
+                
+                // 记录历史
+                historyManager.push({
+                    type: 'reorderCategory',
+                    data: {
+                        id: categoryId,
+                        name: categoryName,
+                        oldIndex: oldIndex,
+                        newIndex: newIndex
+                    }
+                });
+                
+                // 更新文件名显示
+                updateFileNameDisplay();
+            }
+        });
+    }
+
+    // 3. 分类框内的条目容器排序
+    const categoryBoxes = document.querySelectorAll('.category-box');
+    categoryBoxes.forEach(function(categoryBox) {
+        const categoryItems = categoryBox.querySelector('.category-items');
+        if (categoryItems) {
+            new Sortable(categoryItems, {
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                dragClass: 'sortable-drag',
+                handle: '.draggable-item',
+                group: 'shared', // 允许在不同分类框之间拖拽
+                onEnd: function(evt) {
+                    // 记录排序历史
+                    const item = evt.item;
+                    const newIndex = evt.newIndex;
+                    const oldIndex = evt.oldIndex;
+                    const fromContainerId = evt.from.parentElement.id;
+                    const toContainerId = evt.to.parentElement.id;
+                    
+                    // 获取条目文本
+                    const itemText = item.textContent.trim();
+                    const itemId = item.id;
+                    
+                    // 更新分类计数
+                    updateCategoryItemCount(evt.from.parentElement.parentElement);
+                    updateCategoryItemCount(evt.to.parentElement.parentElement);
+                    
+                    // 如果位置或容器发生了变化，记录历史
+                    if (newIndex !== oldIndex || fromContainerId !== toContainerId) {
+                        historyManager.push({
+                            type: 'reorderItem',
+                            data: {
+                                id: itemId,
+                                text: itemText,
+                                oldIndex: oldIndex,
+                                newIndex: newIndex,
+                                fromContainerId: fromContainerId,
+                                toContainerId: toContainerId
+                            }
+                        });
+                    }
+                    
+                    // 更新文件名显示
+                    updateFileNameDisplay();
+                }
+            });
+        }
+    });
+
+    console.log('HTML5 Sortable 初始化完成');
+}
+
+// 页面加载完成后初始化排序功能
+document.addEventListener('DOMContentLoaded', function() {
+    // 延迟初始化，确保所有元素都已渲染
+    setTimeout(initSortable, 100);
+});
+
+// 添加排序相关的CSS样式
+const sortableStyles = `
+.sortable-ghost {
+    opacity: 0.4;
+    background: rgba(102, 126, 234, 0.1);
+}
+
+.sortable-drag {
+    opacity: 0.8;
+    cursor: grabbing;
+}
+`;
+
+// 动态添加样式
+const styleElement = document.createElement('style');
+styleElement.textContent = sortableStyles;
+document.head.appendChild(styleElement);
