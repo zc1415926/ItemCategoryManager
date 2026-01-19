@@ -141,6 +141,12 @@ function createMenu() {
                     }
                 }
             ]
+        },
+        {
+            label: '关于',
+            click: () => {
+                mainWindow.webContents.send('menu-about');
+            }
         }
     ];
 

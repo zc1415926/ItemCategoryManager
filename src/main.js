@@ -2614,6 +2614,12 @@ if (window.electronAPI) {
     window.electronAPI.onMenuExit(() => {
         handleExit();
     });
+
+    // 监听来自菜单的关于事件
+    window.electronAPI.onMenuAbout(() => {
+        const modal = new bootstrap.Modal(document.getElementById('aboutModal'));
+        modal.show();
+    });
 }
 
 // 处理退出

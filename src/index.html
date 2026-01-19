@@ -312,6 +312,45 @@
         </div>
     </div>
 
+    <!-- 关于模态框 -->
+    <div class="modal fade" id="aboutModal" tabindex="-1" aria-labelledby="aboutModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="aboutModalLabel">关于条目分类管理器</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="text-center mb-4">
+                        <h3 class="mb-3">📋 条目分类管理器</h3>
+                        <p class="text-muted">版本 1.0.0</p>
+                    </div>
+                    <div class="mb-4">
+                        <h6 class="fw-bold">主要功能</h6>
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item">✓ 条目管理：添加、编辑、删除条目</li>
+                            <li class="list-group-item">✓ 分类管理：创建分类，拖拽条目到分类</li>
+                            <li class="list-group-item">✓ 拖拽操作：支持拖拽条目到不同分类</li>
+                            <li class="list-group-item">✓ 文件操作：新建、打开、保存、另存为</li>
+                            <li class="list-group-item">✓ 撤销重做：支持操作历史记录</li>
+                            <li class="list-group-item">✓ 搜索功能：快速查找条目和分类</li>
+                            <li class="list-group-item">✓ 批量导入：支持文本粘贴和文件导入</li>
+                        </ul>
+                    </div>
+                    <div class="text-center">
+                        <p class="mb-0">
+                            <strong>作者：</strong><span class="text-primary">零点壹吨</span>
+                        </p>
+                        <p class="text-muted mb-0">基于 Electron + Bootstrap 5 构建</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">确定</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="../assets/js/bootstrap.bundle.min.js"></script>
     <script src="history.js"></script>
     <script src="main.js"></script>
