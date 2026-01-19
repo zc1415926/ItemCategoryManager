@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Windows 打包优化脚本
-# 功能：删除不需要的语言包和库，减小打包体积
+# 功能：删除不需要的语言包和调试文件，减小打包体积
 
 cd "$(dirname "$0")/.."
 
@@ -49,49 +49,9 @@ fi
 
 echo ""
 
-# 2. 删除 FFmpeg（如果不需要音视频功能）
+# 2. 删除调试文件（不影响功能）
 echo "======================================"
-echo "2. 删除 FFmpeg 库..."
-echo "======================================"
-
-FFMPEG_FILE="$DIST_DIR/ffmpeg.dll"
-if [ -f "$FFMPEG_FILE" ]; then
-    FFMPEG_SIZE=$(du -h "$FFMPEG_FILE" | cut -f1)
-    rm -f "$FFMPEG_FILE"
-    echo "  已删除: ffmpeg.dll ($FFMPEG_SIZE)"
-    echo "  注意：删除后将无法使用音视频功能"
-else
-    echo "  FFmpeg 文件不存在，跳过"
-fi
-
-echo ""
-
-# 3. 删除不需要的图形库（可选）
-echo "======================================"
-echo "3. 删除 Vulkan 相关文件..."
-echo "======================================"
-
-VULKAN_FILES=(
-    "$DIST_DIR/vk_swiftshader.dll"
-    "$DIST_DIR/vk_swiftshader_icd.json"
-    "$DIST_DIR/vulkan-1.dll"
-)
-
-for file in "${VULKAN_FILES[@]}"; do
-    if [ -f "$file" ]; then
-        FILE_SIZE=$(du -h "$file" | cut -f1)
-        rm -f "$file"
-        echo "  已删除: $(basename $file) ($FILE_SIZE)"
-    fi
-done
-
-echo "  注意：删除后可能影响某些图形渲染功能"
-
-echo ""
-
-# 4. 删除调试文件
-echo "======================================"
-echo "4. 删除调试文件..."
+echo "2. 删除调试文件..."
 echo "======================================"
 
 DEBUG_FILES=(
@@ -109,7 +69,7 @@ done
 
 echo ""
 
-# 5. 显示优化结果
+# 3. 显示优化结果
 echo "======================================"
 echo "优化完成！"
 echo "======================================"
@@ -120,9 +80,9 @@ echo ""
 
 echo "优化内容："
 echo "  ✓ 删除了不需要的语言包（仅保留英文和中文）"
-echo "  ✓ 删除了 FFmpeg 库（音视频功能）"
-echo "  ✓ 删除了 Vulkan 相关文件（图形渲染）"
 echo "  ✓ 删除了调试文件"
+echo "  ✓ 保留了 FFmpeg 库（音视频功能）"
+echo "  ✓ 保留了 Vulkan 图形库（图形渲染）"
 echo ""
 
 echo "注意事项："
@@ -131,9 +91,9 @@ echo "  • 如需完整功能，请重新打包"
 echo "  • 建议在测试环境验证功能正常后再发布"
 echo ""
 
-# 6. 重新创建压缩包
+# 4. 重新创建压缩包
 echo "======================================"
-echo "6. 重新创建压缩包..."
+echo "4. 重新创建压缩包..."
 echo "======================================"
 
 cd dist
@@ -142,6 +102,11 @@ cd dist
 if [ -f "条目分类管理器-1.0.0-Windows-x64.zip" ]; then
     rm -f "条目分类管理器-1.0.0-Windows-x64.zip"
     echo "  已删除旧的压缩包"
+fi
+
+if [ -f "条目分类管理器-1.0.0-Windows-x64-Optimized.zip" ]; then
+    rm -f "条目分类管理器-1.0.0-Windows-x64-Optimized.zip"
+    echo "  已删除旧的优化压缩包"
 fi
 
 # 创建新的压缩包
