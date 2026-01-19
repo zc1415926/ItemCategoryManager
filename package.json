@@ -1,8 +1,22 @@
 {
   "name": "item-manager",
   "version": "1.0.0",
-  "description": "条目分类管理器",
+  "description": "条目分类管理器 - 一个功能强大的桌面应用程序，用于管理条目和分类，支持拖拽、导入导出、文件操作等功能",
   "main": "src/electron-main.js",
+  "author": "零点壹吨",
+  "license": "MIT",
+  "keywords": [
+    "条目管理",
+    "分类管理",
+    "拖拽",
+    "Electron",
+    "桌面应用"
+  ],
+  "homepage": "https://github.com/zc1415926/ItemCategoryManager",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zc1415926/ItemCategoryManager.git"
+  },
   "scripts": {
     "start": "electron .",
     "build": "electron-builder",
@@ -15,9 +29,6 @@
     "test:debug": "playwright test --debug",
     "test:show-report": "playwright show-report"
   },
-  "keywords": [],
-  "author": "",
-  "license": "MIT",
   "devDependencies": {
     "@playwright/test": "^1.57.0",
     "electron": "^28.0.0",
@@ -27,26 +38,104 @@
   "build": {
     "appId": "com.itemmanager.app",
     "productName": "条目分类管理器",
+    "copyright": "Copyright © 2026 零点壹吨",
     "directories": {
-      "output": "dist"
+      "output": "dist",
+      "buildResources": "build"
     },
     "files": [
       "src/**/*",
       "assets/**/*",
-      "icon.png"
+      "package.json"
     ],
+    "extraMetadata": {
+      "main": "src/electron-main.js"
+    },
     "win": {
-      "target": "nsis",
-      "icon": "icon.ico"
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "artifactName": "${productName}-${version}-${arch}.${ext}",
+      "requestedExecutionLevel": "asInvoker",
+      "fileAssociations": [
+        {
+          "ext": "json",
+          "name": "JSON Data File",
+          "description": "条目分类管理器数据文件",
+          "role": "Editor"
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "条目分类管理器",
+      "include": "build/installer.nsh",
+      "license": "LICENSE",
+      "runAfterFinish": true,
+      "deleteAppDataOnUninstall": false,
+      "perMachine": false,
+      "packElevateHelper": false,
+      "displayLanguageSelector": false,
+      "installerLanguages": [
+        "zh_CN"
+      ],
+      "multiLanguageInstaller": false
     },
     "mac": {
       "target": "dmg",
-      "icon": "icon.icns"
+      "icon": "build/icon.icns",
+      "category": "public.app-category.utilities",
+      "fileAssociations": [
+        {
+          "ext": "json",
+          "name": "JSON Data File",
+          "description": "条目分类管理器数据文件",
+          "role": "Editor"
+        }
+      ]
     },
     "linux": {
-      "target": "AppImage",
-      "icon": "icon.png",
-      "category": "Utility"
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "build/icon.png",
+      "category": "Utility",
+      "maintainer": "零点壹吨",
+      "vendor": "零点壹吨",
+      "synopsis": "条目分类管理器",
+      "description": "一个功能强大的桌面应用程序，用于管理条目和分类",
+      "desktop": {
+        "Name": "条目分类管理器",
+        "GenericName": "Item Manager",
+        "Comment": "管理条目和分类的桌面应用程序",
+        "Categories": "Utility;Office;",
+        "Keywords": "条目;分类;管理;"
+      }
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "zc1415926",
+      "repo": "ItemCategoryManager"
     }
   }
 }
