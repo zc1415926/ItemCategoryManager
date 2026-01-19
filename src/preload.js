@@ -12,6 +12,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     onMenuOpenFile: (callback) => ipcRenderer.on('menu-open-file', callback),
     onMenuSaveFile: (callback) => ipcRenderer.on('menu-save-file', callback),
     onMenuSaveAs: (callback) => ipcRenderer.on('menu-save-as', callback),
+    onMenuUndo: (callback) => ipcRenderer.on('menu-undo', callback),
+    onMenuRedo: (callback) => ipcRenderer.on('menu-redo', callback),
     // 发送文件保存完成事件
     sendFileSaved: () => ipcRenderer.send('file-saved')
 });

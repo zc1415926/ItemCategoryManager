@@ -2540,4 +2540,14 @@ if (window.electronAPI) {
     window.electronAPI.onMenuSaveAs(() => {
         saveAs();
     });
+
+    // 监听来自菜单的撤消事件
+    window.electronAPI.onMenuUndo(() => {
+        undo();
+    });
+
+    // 监听来自菜单的重做事件
+    window.electronAPI.onMenuRedo(() => {
+        redo();
+    });
 }

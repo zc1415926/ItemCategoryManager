@@ -137,6 +137,35 @@ function createMenu() {
                     }
                 }
             ]
+        },
+        {
+            label: '编辑',
+            submenu: [
+                {
+                    label: '撤消',
+                    accelerator: 'CmdOrCtrl+Z',
+                    click: () => {
+                        mainWindow.webContents.send('menu-undo');
+                    }
+                },
+                {
+                    label: '重做',
+                    accelerator: 'CmdOrCtrl+Y',
+                    click: () => {
+                        mainWindow.webContents.send('menu-redo');
+                    }
+                },
+                {
+                    type: 'separator'
+                },
+                {
+                    label: '开发者工具',
+                    accelerator: 'CmdOrCtrl+Shift+I',
+                    click: () => {
+                        mainWindow.webContents.toggleDevTools();
+                    }
+                }
+            ]
         }
     ];
 
