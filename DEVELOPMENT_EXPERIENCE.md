@@ -535,3 +535,326 @@ ItemManager/
 - 统一UI风格，提升视觉效果
 - 跨平台打包需要特殊配置
 - 注意优化脚本的副作用
+
+### 16. HTML5 Sortable 拖动排序功能
+
+#### 16.1 功能需求
+- **条目排序**: 在左侧条目列表中拖动条目改变顺序
+- **分类排序**: 拖动分类框改变分类顺序
+- **分类内排序**: 在分类框内拖动条目改变顺序
+- **跨分类拖动**: 将条目从一个分类拖到另一个分类
+- **历史记录**: 记录所有排序操作，支持撤销/重做
+
+#### 16.2 技术选型
+- **库选择**: Bootstrap HTML5 Sortable (html5sortable)
+  - 轻量级（16KB）
+  - 支持动画效果
+  - 兼容性好
+  - 易于集成
+- **CDN地址**: https://cdn.jsdelivr.net/npm/html5sortable@0.9.18/dist/html5sortable.min.js
+
+#### 16.3 实现步骤
+
+**步骤1: 下载和引入库**
+```bash
+curl -s https://cdn.jsdelivr.net/npm/html5sortable@0.9.18/dist/html5sortable.min.js -o assets/js/html5sortable.min.js
+```
+
+**步骤2: 在 index.html 中引入**
+```html
+<script src="../assets/js/html5sortable.min.js"></script>
+```
+
+**步骤3: 修复库导出问题**
+- **问题**: html5sortable.min.js 中的 `U` 函数未被导出为全局变量
+- **错误**: `typeof Sortable === 'undefined'` 检查失败
+- **解决方案**: 在文件末尾添加 `window.Sortable=sortable;`
+  ```bash
+  sed -i 's/U}();/U}();window.Sortable=sortable;/' assets/js/html5sortable.min.js
+  ```
+
+**步骤4: 初始化 Sortable**
+```javascript
+function initSortable() {
+    // 检查 HTML5 Sortable 是否可用
+    if (typeof Sortable === 'undefined') {
+        console.warn('HTML5 Sortable 库未加载，排序功能不可用');
+        return;
+    }
+
+    // 1. 条目容器排序
+    const itemContainer = document.getElementById('itemContainer');
+    if (itemContainer) {
+        new Sortable(itemContainer, {
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            dragClass: 'sortable-drag',
+            handle: '.draggable-item',
+            onEnd: function(evt) {
+                // 记录排序历史
+                historyManager.push({
+                    type: 'reorderItem',
+                    data: {
+                        id: evt.item.id,
+                        text: evt.item.textContent,
+                        oldIndex: evt.oldIndex,
+                        newIndex: evt.newIndex,
+                        containerId: 'itemContainer'
+                    }
+                });
+                updateFileNameDisplay();
+            }
+        });
+    }
+
+    // 2. 分类容器排序
+    const categoryContainer = document.getElementById('categoryContainer');
+    if (categoryContainer) {
+        new Sortable(categoryContainer, {
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            dragClass: 'sortable-drag',
+            handle: '.category-box',
+            onEnd: function(evt) {
+                historyManager.push({
+                    type: 'reorderCategory',
+                    data: {
+                        id: evt.item.id,
+                        name: evt.item.querySelector('.category-title').textContent.split('(')[0].trim(),
+                        oldIndex: evt.oldIndex,
+                        newIndex: evt.newIndex
+                    }
+                });
+                updateFileNameDisplay();
+            }
+        });
+    }
+
+    // 3. 分类内条目排序
+    const categoryItems = document.querySelectorAll('.category-items');
+    categoryItems.forEach(function(categoryItemsContainer) {
+        new Sortable(categoryItemsContainer, {
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            dragClass: 'sortable-drag',
+            handle: '.draggable-item',
+            onEnd: function(evt) {
+                historyManager.push({
+                    type: 'reorderItem',
+                    data: {
+                        id: evt.item.id,
+                        text: evt.item.textContent,
+                        oldIndex: evt.oldIndex,
+                        newIndex: evt.newIndex,
+                        containerId: evt.to.parentElement.closest('.category-box').id
+                    }
+                });
+                updateCategoryItemCount(evt.to.parentElement.closest('.category-box'));
+                updateFileNameDisplay();
+            }
+        });
+    });
+}
+```
+
+**步骤5: 添加排序样式**
+```css
+/* 排序样式 */
+.sortable-ghost {
+    opacity: 0.4;
+    background: rgba(102, 126, 234, 0.1);
+    border: 2px dashed #667eea;
+}
+
+.sortable-drag {
+    opacity: 0.8;
+    cursor: grabbing;
+    transform: scale(1.05);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+/* 分类框排序样式 */
+.category-box.sortable-ghost {
+    opacity: 0.5;
+    background: linear-gradient(135deg, rgba(240, 147, 251, 0.3) 0%, rgba(245, 87, 108, 0.3) 100%);
+    border: 2px dashed #f093fb;
+}
+
+.category-box.sortable-drag {
+    opacity: 0.9;
+    cursor: grabbing;
+    transform: scale(1.02);
+    box-shadow: 0 12px 35px rgba(240, 147, 251, 0.5);
+    z-index: 1000;
+}
+```
+
+#### 16.4 问题排查
+
+**问题1: 分类框不能拖动**
+- **原因**: `dragStart` 和 `dragEnd` 函数使用 `e.target` 指向内部元素（标题、按钮）
+- **解决方案**: 使用 `closest()` 方法获取真正的拖拽元素
+  ```javascript
+  // 修改前
+  function dragStart(e) {
+      e.target.classList.add('dragging');
+      e.dataTransfer.setData('text/plain', e.target.id);
+  }
+
+  // 修改后
+  function dragStart(e) {
+      const dragElement = e.target.closest('.draggable-item, .category-box');
+      if (dragElement) {
+          dragElement.classList.add('dragging');
+          e.dataTransfer.setData('text/plain', dragElement.id);
+      }
+  }
+  ```
+
+**问题2: Null reference 错误**
+- **错误**: `Uncaught TypeError: Cannot read properties of null (reading 'id')`
+- **原因**: 访问 `item.parentNode.id` 时没有检查 item 或 parentNode 是否存在
+- **解决方案**: 添加全面的 null 检查
+  ```javascript
+  const itemId = e.dataTransfer.getData('text/plain');
+  if (!itemId) return;
+
+  const item = document.getElementById(itemId);
+  if (!item) return;
+
+  const parentNode = item.parentNode;
+  if (!parentNode) return;
+
+  const fromContainerId = parentNode.id === 'itemContainer' 
+      ? 'itemContainer' 
+      : parentNode.closest('.category-box')?.id;
+
+  if (!fromContainerId) return;
+  ```
+
+**问题3: U is not defined 错误**
+- **错误**: `Uncaught ReferenceError: U is not defined`
+- **原因**: html5sortable.min.js 中的 `U` 函数在 IIFE 内部，无法在外部访问
+- **解决方案**: 在文件末尾添加 `window.Sortable=sortable;` 导出全局变量
+
+#### 16.5 自动化测试
+
+**测试框架**: Node.js + JSDOM
+
+**测试文件**: `tests/test-sortable.js`
+
+**测试覆盖**:
+1. ✓ HTML5 Sortable 库加载测试
+2. ✓ 排序功能初始化测试
+3. ✓ 条目排序逻辑测试
+4. ✓ 分类排序逻辑测试
+5. ✓ 分类内条目排序逻辑测试
+6. ✓ 排序历史记录测试
+7. ✓ 排序样式测试
+8. ✓ 分类框可拖拽属性测试
+
+**测试结果**: 8个测试全部通过
+
+**Playwright 端到端测试**: `tests/test-sortable-playwright.spec.js`
+- 条目上拖（最后到第一）
+- 条目下拖（第一到最后）
+- 条目拖到中间
+- 分类上拖（最后到第一）
+- 分类下拖（第一到最后）
+- 分类内条目上拖
+- 分类内条目下拖
+- 跨分类拖动
+- 多次连续拖动
+- 历史记录验证
+
+**注意**: Playwright 测试需要安装浏览器，由于网络问题暂时无法运行
+
+#### 16.6 关键配置
+
+**package.json 添加依赖**:
+```json
+{
+  "devDependencies": {
+    "jsdom": "^27.4.0"
+  }
+}
+```
+
+**Sortable 配置选项**:
+- `animation`: 150 - 动画时长（毫秒）
+- `ghostClass`: 'sortable-ghost' - 占位元素样式类
+- `dragClass`: 'sortable-drag' - 拖拽元素样式类
+- `handle`: '.draggable-item' - 拖拽手柄选择器
+- `onEnd`: 回调函数 - 拖拽结束时的处理
+
+#### 16.7 性能优化
+
+**防抖处理**: Sortable 库内置防抖机制，避免频繁触发事件
+
+**历史记录优化**: 只在 `onEnd` 回调中记录一次，而不是在每次移动时记录
+
+**样式优化**: 使用 CSS transform 而不是改变 DOM 位置，提高性能
+
+#### 16.8 用户体验
+
+**视觉反馈**:
+- 拖拽时元素半透明
+- 占位元素显示虚线边框
+- 拖拽元素放大并添加阴影
+- 分类框拖拽时使用渐变背景
+
+**动画效果**: 150ms 平滑动画，提供流畅的拖拽体验
+
+**历史记录**: 所有排序操作都记录到历史管理器，支持撤销/重做
+
+#### 16.9 最佳实践
+
+**1. 库选择**
+- 选择轻量级、成熟的库
+- 检查兼容性和文档
+- 优先选择有活跃维护的项目
+
+**2. 错误处理**
+- 检查库是否成功加载
+- 添加 null 检查避免运行时错误
+- 提供降级方案（库未加载时提示用户）
+
+**3. 测试覆盖**
+- 单元测试验证基本功能
+- 集成测试验证交互逻辑
+- 端到端测试验证用户流程
+
+**4. 性能监控**
+- 使用 console.log 记录关键操作
+- 监控拖拽操作的响应时间
+- 优化大量元素时的性能
+
+**5. 代码组织**
+- 将 Sortable 初始化逻辑封装在独立函数
+- 统一管理配置选项
+- 清晰的注释说明关键逻辑
+
+#### 16.10 未来改进
+
+1. **功能增强**
+   - 支持多选拖动
+   - 拖拽时显示工具提示
+   - 支持拖拽到外部应用
+   - 拖拽预览功能
+
+2. **性能优化**
+   - 虚拟滚动（大量元素时）
+   - 懒加载 Sortable
+   - Web Worker 处理复杂计算
+
+3. **用户体验**
+   - 自定义拖拽动画
+   - 拖拽时显示放置目标高亮
+   - 支持触摸设备
+   - 拖拽撤销功能
+
+4. **测试完善**
+   - 修复 Playwright 测试
+   - 添加性能测试
+   - 添加边界条件测试
+   - 提高测试覆盖率
