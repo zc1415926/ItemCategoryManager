@@ -195,17 +195,17 @@ mark.search-highlight.current {
 }
 .item-container.drag-over {
     border-color: #667eea;
-    background: rgba(102, 126, 234, 0.1);
+    background: rgba(102, 126, 234, 0.05);
 }
 .draggable-item {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
+    background: rgba(255, 255, 255, 0.95);
+    color: #333;
     padding: 12px 20px;
     margin: 10px 0;
     border-radius: 10px;
     cursor: move;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     position: relative;
     user-select: none;
     font-size: 15px;
@@ -213,8 +213,9 @@ mark.search-highlight.current {
     font-weight: 500;
 }
 .draggable-item:hover {
+    background: white;
     transform: translateY(-3px);
-    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
 }
 .draggable-item.dragging {
     opacity: 0.5;
@@ -225,7 +226,7 @@ mark.search-highlight.current {
     right: 10px;
     top: 50%;
     transform: translateY(-50%);
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(30, 30, 30, 0.2);
     border: none;
     color: white;
     width: 24px;
@@ -242,14 +243,14 @@ mark.search-highlight.current {
     display: flex;
 }
 .draggable-item .delete-btn:hover {
-    background: rgba(255, 0, 0, 0.7);
+    background: rgba(255, 0, 0, 1);
 }
 .draggable-item .edit-btn {
     position: absolute;
     right: 45px;
     top: 50%;
     transform: translateY(-50%);
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(40, 40, 40, 0.2);
     border: none;
     color: white;
     width: 24px;
@@ -266,7 +267,7 @@ mark.search-highlight.current {
     display: flex;
 }
 .draggable-item .edit-btn:hover {
-    background: rgba(102, 126, 234, 0.7);
+    background: rgba(102, 126, 234, 1);
 }
 .category-box {
     background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);

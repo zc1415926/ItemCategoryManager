@@ -53,13 +53,8 @@
       "main": "src/electron-main.js"
     },
     "win": {
+      "sign": null,
       "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        },
         {
           "target": "zip",
           "arch": [
@@ -67,7 +62,6 @@
           ]
         }
       ],
-      "icon": "build/icon.ico",
       "artifactName": "${productName}-${version}-${arch}.${ext}",
       "requestedExecutionLevel": "asInvoker",
       "fileAssociations": [

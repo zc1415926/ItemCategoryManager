@@ -684,7 +684,13 @@ function createCategoryElement(name, id, container) {
     // 创建标题部分
     const titleSpan = document.createElement('span');
     titleSpan.className = 'category-title';
-    titleSpan.textContent = name + '(0)';
+    titleSpan.textContent = name;
+    
+    // 创建计数部分
+    const countSpan = document.createElement('span');
+    countSpan.className = 'item-count';
+    countSpan.textContent = '(0)';
+    titleSpan.appendChild(countSpan);
     
     // 创建按钮容器
     const buttonContainer = document.createElement('span');
