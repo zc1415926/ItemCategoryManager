@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
@@ -64,7 +64,108 @@ function createWindow() {
     });
 }
 
-app.on('ready', createWindow);
+// 创建应用菜单
+function createMenu() {
+    const template = [
+        {
+            label: '文件',
+            submenu: [
+                {
+                    label: '新建',
+                    accelerator: 'CmdOrCtrl+N',
+                    click: () => {
+                        mainWindow.webContents.send('menu-new-file');
+                    }
+                },
+                {
+                    label: '打开',
+                    accelerator: 'CmdOrCtrl+O',
+                    click: () => {
+                        mainWindow.webContents.send('menu-open-file');
+                    }
+                },
+                {
+                    type: 'separator'
+                },
+                {
+                    label: '保存',
+                    accelerator: 'CmdOrCtrl+S',
+                    click: () => {
+                        mainWindow.webContents.send('menu-save-file');
+                    }
+                },
+                {
+                    label: '另存为',
+                    accelerator: 'CmdOrCtrl+Shift+S',
+                    click: () => {
+                        mainWindow.webContents.send('menu-save-as');
+                    }
+                },
+                {
+                    type: 'separator'
+                },
+                {
+                    label: '退出',
+                    accelerator: process.platform === 'darwin' ? 'Cmd+Q' : 'Alt+F4',
+                    click: async () => {
+                        // 检查文件是否已保存
+                        const isModified = await mainWindow.webContents.executeJavaScript('window.isContentModified && window.isContentModified()');
+                        if (isModified) {
+                            const result = await dialog.showMessageBox(mainWindow, {
+                                type: 'warning',
+                                buttons: ['保存', '不保存', '取消'],
+                                defaultId: 2,
+                                title: '未保存的修改',
+                                message: '当前文件有未保存的修改，是否保存？'
+                            });
+
+                            if (result.response === 0) {
+                                // 保存
+                                mainWindow.webContents.send('menu-save-file');
+                                // 等待保存完成后再退出
+                                mainWindow.webContents.once('file-saved', () => {
+                                    app.quit();
+                                });
+                            } else if (result.response === 1) {
+                                // 不保存，直接退出
+                                app.quit();
+                            }
+                            // 取消，不退出
+                        } else {
+                            app.quit();
+                        }
+                    }
+                }
+            ]
+        }
+    ];
+
+    // macOS 特殊处理
+    if (process.platform === 'darwin') {
+        template.unshift({
+            label: app.getName(),
+            submenu: [
+                { role: 'about' },
+                { type: 'separator' },
+                { role: 'services' },
+                { type: 'separator' },
+                { role: 'hide' },
+                { role: 'hideOthers' },
+                { role: 'unhide' },
+                { type: 'separator' },
+                { role: 'quit' }
+            ]
+        });
+    }
+
+    const menu = Menu.buildFromTemplate(template);
+    Menu.setApplicationMenu(menu);
+}
+
+app.on('ready', () => {
+    createWindow();
+    createMenu();
+});
 
 app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') {

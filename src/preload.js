@@ -6,7 +6,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
     saveFile: (filePath, content) => ipcRenderer.invoke('save-file', filePath, content),
     readFile: (filePath) => ipcRenderer.invoke('read-file', filePath),
     updateWindowTitle: (title) => ipcRenderer.send('update-window-title', title),
-    isElectron: true
+    isElectron: true,
+    // 菜单事件监听器
+    onMenuNewFile: (callback) => ipcRenderer.on('menu-new-file', callback),
+    onMenuOpenFile: (callback) => ipcRenderer.on('menu-open-file', callback),
+    onMenuSaveFile: (callback) => ipcRenderer.on('menu-save-file', callback),
+    onMenuSaveAs: (callback) => ipcRenderer.on('menu-save-as', callback),
+    // 发送文件保存完成事件
+    sendFileSaved: () => ipcRenderer.send('file-saved')
 });
 
 // 测试模式专用 API

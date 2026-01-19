@@ -221,7 +221,161 @@ ItemManager/
    - 单元测试覆盖率提升
    - CI/CD自动化
 
-### 10. 总结
+### 10. 项目维护和优化
+
+#### 10.1 项目文件整理
+
+**问题**: 项目根目录文件过多，结构不清晰
+- 测试文件散落在根目录（test.js, test-data.json 等）
+- 临时文件堆积（temp/, playwright-report/, test-results/）
+- 源码文件与配置文件混在一起
+
+**解决方案**:
+1. **归档测试文件**: 将所有测试相关文件移至 `tests/` 目录
+   - `test-data.json` → `tests/test-data.json`
+   - `test-frontend.html` → `tests/test-frontend.html`
+   - `test-search.js` → `tests/test-search.js`
+   - `test.js` → `tests/test.js`
+
+2. **清理临时文件**: 定期清理临时目录
+   - `temp/` - 临时文件（测试产生的 JSON 文件）
+   - `playwright-report/` - 测试报告
+   - `test-results/` - 测试结果
+
+3. **源码分离**: 将源码文件移至 `src/` 目录
+   - `index.html` → `src/index.html`
+   - `main.js` → `src/main.js`
+   - `style.css` → `src/style.css`
+   - `electron-main.js` → `src/electron-main.js`
+   - `preload.js` → `src/preload.js`
+   - `history.js` → `src/history.js`
+
+**效果**: 项目结构清晰，源码文件与配置文件完全分离，便于维护
+
+#### 10.2 代码优化
+
+**删除空行和冗余代码**:
+- **问题**: `tests/electron.spec.js` 文件中有大量空行（17034行）
+- **解决方案**: 使用 `sed` 命令删除所有空行和只包含空格的行
+  ```bash
+  sed '/^[[:space:]]*$/d' tests/electron.spec.js
+  ```
+- **效果**: 文件从 18947 行减少到 1913 行，代码更紧凑
+
+**字体加载优化**:
+- **问题**: Google Fonts 在国内访问缓慢
+- **解决方案**: 使用中科大镜像加速
+  ```html
+  <!-- 原始 -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+  
+  <!-- 优化后 -->
+  <link href="https://fonts.proxy.ustclug.org/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+  ```
+- **效果**: 字体加载速度显著提升
+
+#### 10.3 项目结构重构
+
+**新的项目结构**:
+```
+ItemManager/
+├── src/                      # 源码文件
+│   ├── index.html           # 主页面
+│   ├── main.js              # 业务逻辑
+│   ├── style.css            # 样式文件
+│   ├── electron-main.js     # Electron主进程
+│   ├── preload.js           # 预加载脚本
+│   └── history.js           # 撤销重做功能
+├── assets/                   # 静态资源
+│   ├── css/
+│   │   └── bootstrap.min.css
+│   └── js/
+│       └── bootstrap.bundle.min.js
+├── tests/                    # 测试文件
+│   ├── electron.spec.js     # Playwright测试
+│   ├── test-data.json       # 测试数据
+│   ├── test-frontend.html   # 前端测试页面
+│   ├── test-search.js       # 搜索测试
+│   ├── test.js              # 单元测试
+│   └── run-individual.sh    # 测试脚本
+├── temp/                     # 临时文件（git忽略）
+├── playwright-report/        # 测试报告（git忽略）
+├── test-results/             # 测试结果（git忽略）
+├── package.json             # 项目配置
+├── playwright.config.js     # Playwright配置
+├── .gitignore               # Git忽略配置
+├── README.md                # 项目说明
+├── DEVELOPMENT_EXPERIENCE.md # 开发经验总结
+├── TEST_README.md           # 测试文档
+├── example.json             # 示例数据
+├── icon.png                 # 应用图标
+├── run-tests.sh             # 运行测试脚本
+└── start.sh                 # Linux启动脚本
+```
+
+**配置更新**:
+- `package.json`:
+  - `main` 字段: `"electron-main.js"` → `"src/electron-main.js"`
+  - `files` 配置: 更新为包含 `src/**/*`
+- `src/index.html`: 更新 assets 引用路径（`../assets/`）
+- `src/electron-main.js`: 更新文件引用路径
+
+#### 10.4 Git 最佳实践
+
+**提交规范**:
+- 使用清晰的提交信息，描述"为什么"和"做了什么"
+- 示例:
+  - `使用国内镜像优化字体加载，添加测试文档，格式化测试代码`
+  - `整理项目文件：删除空行，清理临时文件，归档测试文件`
+  - `重构项目结构：将源码文件移至 src 文件夹，与配置文件分离`
+
+**工作流程**:
+1. 查看状态: `git status`
+2. 查看改动: `git diff HEAD`
+3. 添加文件: `git add <files>`
+4. 提交: `git commit -m "message"`
+5. 推送: `git push origin main`
+
+**分支管理**:
+- 使用 `main` 分支作为主分支
+- 定期推送代码到远程仓库
+- 保持本地和远程同步
+
+#### 10.5 开发环境配置
+
+**hosts 配置**（可选）:
+- **目的**: 加速 GitHub 访问
+- **方法**: 使用 GitHub520 项目提供的 hosts
+- **更新**: 定期更新 hosts 地址（https://raw.hellogithub.com/hosts）
+- **注意**: 如果网络环境正常，可能不需要此配置
+
+**开发工具**:
+- **编辑器**: VSCode（推荐）
+- **版本控制**: Git
+- **包管理**: npm
+- **测试框架**: Playwright
+- **桌面应用**: Electron
+
+**启动脚本**:
+- `npm start` - 启动 Electron 应用
+- `npm test` - 运行自动化测试
+- `./start.sh` - Linux 快速启动脚本
+- `./run-tests.sh` - 运行测试脚本
+
+#### 10.6 文档管理
+
+**项目文档**:
+- `README.md` - 项目说明、安装、使用方法
+- `DEVELOPMENT_EXPERIENCE.md` - 开发经验总结（本文档）
+- `TEST_README.md` - 测试文档
+- `tests/README.md` - 测试目录说明
+
+**文档维护**:
+- 及时更新文档，反映最新的项目状态
+- 记录重要的决策和技术细节
+- 提供清晰的使用说明和示例
+
+### 11. 总结
 
 本项目从零开始，经历了需求分析、架构设计、功能实现、问题修复、测试验证等完整开发流程。通过合理的架构设计和问题解决，成功实现了一个功能完善、用户体验良好的桌面应用程序。
 

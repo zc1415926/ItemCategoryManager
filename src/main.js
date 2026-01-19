@@ -1839,6 +1839,10 @@ async function saveFile() {
                 showAlertToast('文件保存成功！');
                 // 更新文件名显示（清除未保存标记）
                 updateFileNameDisplay();
+                // 发送文件保存完成事件（用于菜单退出功能）
+                if (window.electronAPI && window.electronAPI.sendFileSaved) {
+                    window.electronAPI.sendFileSaved();
+                }
                 return;
             } else {
                 showAlert('保存失败: ' + result.error);
@@ -1865,6 +1869,10 @@ async function saveFile() {
             showAlertToast('文件保存成功！');
             // 更新文件名显示（清除未保存标记）
             updateFileNameDisplay();
+            // 发送文件保存完成事件（用于菜单退出功能）
+            if (window.electronAPI && window.electronAPI.sendFileSaved) {
+                window.electronAPI.sendFileSaved();
+            }
             return;
         } catch (err) {
             console.error('使用文件句柄保存失败:', err);
@@ -1896,6 +1904,10 @@ async function saveFile() {
     // 更新原始文件内容
     originalFileContent = jsonString;
     showAlertToast('文件保存成功！');
+    // 发送文件保存完成事件（用于菜单退出功能）
+    if (window.electronAPI && window.electronAPI.sendFileSaved) {
+        window.electronAPI.sendFileSaved();
+    }
     } catch (error) {
         console.error('保存文件失败:', error);
         showAlert('保存文件失败，请重试');
@@ -2504,4 +2516,28 @@ function clearSearch() {
     currentSearchIndex = -1;
     clearSearchHighlights();
     updateSearchCounter();
+}
+
+// ==================== 菜单事件监听器 ====================
+
+// 监听来自菜单的新建文件事件
+if (window.electronAPI) {
+    window.electronAPI.onMenuNewFile(() => {
+        newFile();
+    });
+
+    // 监听来自菜单的打开文件事件
+    window.electronAPI.onMenuOpenFile(() => {
+        openFile();
+    });
+
+    // 监听来自菜单的保存文件事件
+    window.electronAPI.onMenuSaveFile(() => {
+        saveFile();
+    });
+
+    // 监听来自菜单的另存为事件
+    window.electronAPI.onMenuSaveAs(() => {
+        saveAs();
+    });
 }
