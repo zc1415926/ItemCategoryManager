@@ -1490,6 +1490,21 @@ function isContentModified() {
 // 文件操作功能
 // 新建文件
 function newFile() {
+    const modified = isContentModified();
+    const saveAndNewBtn = document.getElementById('saveAndNewBtn');
+    
+    if (modified) {
+        // 有未保存的修改，显示"保存并新建"按钮
+        if (saveAndNewBtn) {
+            saveAndNewBtn.style.display = 'inline-block';
+        }
+    } else {
+        // 没有未保存的修改，隐藏"保存并新建"按钮
+        if (saveAndNewBtn) {
+            saveAndNewBtn.style.display = 'none';
+        }
+    }
+    
     const modal = new bootstrap.Modal(document.getElementById('newFileModal'));
     modal.show();
 }
@@ -1531,6 +1546,26 @@ function confirmNewFile() {
 
     // 显示成功提示
     showAlertToast('已新建文件');
+}
+
+// 保存并新建
+async function saveAndNew() {
+    try {
+        // 关闭确认模态框
+        const modal = bootstrap.Modal.getInstance(document.getElementById('newFileModal'));
+        if (modal) {
+            modal.hide();
+        }
+
+        // 保存当前文件
+        await saveFile();
+
+        // 执行新建文件操作
+        confirmNewFile();
+    } catch (error) {
+        console.error('保存并新建文件失败:', error);
+        showAlert('保存失败，无法新建文件');
+    }
 }
 
 // 打开文件确认模态框的按钮处理函数
@@ -2168,7 +2203,13 @@ document.addEventListener('DOMContentLoaded', function() {
         if (confirmNewFileBtn) {
             confirmNewFileBtn.addEventListener('click', confirmNewFile);
         }
-        
+
+        // 绑定保存并新建按钮事件
+        const saveAndNewBtn = document.getElementById('saveAndNewBtn');
+        if (saveAndNewBtn) {
+            saveAndNewBtn.addEventListener('click', saveAndNew);
+        }
+
         // 绑定打开文件确认模态框的三个按钮事件
         const cancelOpenBtn = document.getElementById('cancelOpenBtn');
         if (cancelOpenBtn) {
