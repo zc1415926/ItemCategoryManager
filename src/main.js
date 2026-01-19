@@ -1406,6 +1406,21 @@ function isContentModified() {
 
     if (!originalFileContent) {
         // 没有原始内容，说明是新文件或未保存过
+        // 检查当前是否有任何内容（条目或分类）
+        const itemContainer = document.getElementById('itemContainer');
+        const categoryContainer = document.getElementById('categoryContainer');
+        
+        if (itemContainer && itemContainer.querySelectorAll('.draggable-item').length > 0) {
+            // 有条目，需要保存
+            return true;
+        }
+        
+        if (categoryContainer && categoryContainer.querySelectorAll('.category-box').length > 0) {
+            // 有分类，需要保存
+            return true;
+        }
+        
+        // 没有任何内容，不需要保存
         return false;
     }
 
