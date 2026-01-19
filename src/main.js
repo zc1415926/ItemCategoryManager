@@ -2121,14 +2121,17 @@ function updateFileNameDisplay() {
         }
     } else {
         // 未命名文件
+        const modified = isContentModified();
+        const prefix = modified ? '● ' : '';
+
         if (isElectron) {
-            window.electronAPI.updateWindowTitle('条目分类管理器');
+            window.electronAPI.updateWindowTitle(prefix + '未命名 - 条目分类管理器');
         }
 
         // 更新文件状态元素（用于测试）
         const fileStatusElement = document.getElementById('fileStatus');
         if (fileStatusElement) {
-            fileStatusElement.textContent = '未命名';
+            fileStatusElement.textContent = prefix + '未命名';
         }
     }
 }
