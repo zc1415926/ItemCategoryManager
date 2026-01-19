@@ -20,7 +20,7 @@
   "scripts": {
     "start": "electron .",
     "build": "electron-builder",
-    "build-win": "electron-builder --win && bash scripts/rename-windows-dist.sh",
+    "build-win": "electron-builder --win && bash scripts/rename-windows-dist.sh && bash scripts/optimize-windows-dist.sh",
     "build-mac": "electron-builder --mac",
     "build-linux": "electron-builder --linux",
     "test": "playwright test",
