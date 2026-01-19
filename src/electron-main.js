@@ -68,17 +68,17 @@ function createWindow() {
 function createMenu() {
     const template = [
         {
-            label: '文件',
+            label: '文件(&F)',
             submenu: [
                 {
-                    label: '新建',
+                    label: '新建(&N)',
                     accelerator: 'CmdOrCtrl+N',
                     click: () => {
                         mainWindow.webContents.send('menu-new-file');
                     }
                 },
                 {
-                    label: '打开',
+                    label: '打开(&O)',
                     accelerator: 'CmdOrCtrl+O',
                     click: () => {
                         mainWindow.webContents.send('menu-open-file');
@@ -88,14 +88,14 @@ function createMenu() {
                     type: 'separator'
                 },
                 {
-                    label: '保存',
+                    label: '保存(&S)',
                     accelerator: 'CmdOrCtrl+S',
                     click: () => {
                         mainWindow.webContents.send('menu-save-file');
                     }
                 },
                 {
-                    label: '另存为',
+                    label: '另存为(&A)',
                     accelerator: 'CmdOrCtrl+Shift+S',
                     click: () => {
                         mainWindow.webContents.send('menu-save-as');
@@ -105,7 +105,7 @@ function createMenu() {
                     type: 'separator'
                 },
                 {
-                    label: '退出',
+                    label: '退出(&X)',
                     accelerator: process.platform === 'darwin' ? 'Cmd+Q' : 'Alt+F4',
                     click: () => {
                         mainWindow.webContents.send('menu-exit');
@@ -114,17 +114,17 @@ function createMenu() {
             ]
         },
         {
-            label: '编辑',
+            label: '编辑(&E)',
             submenu: [
                 {
-                    label: '撤消',
+                    label: '撤消(&U)',
                     accelerator: 'CmdOrCtrl+Z',
                     click: () => {
                         mainWindow.webContents.send('menu-undo');
                     }
                 },
                 {
-                    label: '重做',
+                    label: '重做(&R)',
                     accelerator: 'CmdOrCtrl+Y',
                     click: () => {
                         mainWindow.webContents.send('menu-redo');
@@ -134,7 +134,7 @@ function createMenu() {
                     type: 'separator'
                 },
                 {
-                    label: '开发者工具',
+                    label: '开发者工具(&D)',
                     accelerator: 'CmdOrCtrl+Shift+I',
                     click: () => {
                         mainWindow.webContents.toggleDevTools();
@@ -143,7 +143,7 @@ function createMenu() {
             ]
         },
         {
-            label: '关于',
+            label: '关于(&A)',
             click: () => {
                 mainWindow.webContents.send('menu-about');
             }
