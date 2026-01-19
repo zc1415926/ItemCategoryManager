@@ -2568,4 +2568,56 @@ if (window.electronAPI) {
     window.electronAPI.onMenuRedo(() => {
         redo();
     });
+
+    // 监听来自菜单的退出事件
+    window.electronAPI.onMenuExit(() => {
+        handleExit();
+    });
 }
+
+// 处理退出
+function handleExit() {
+    const modified = isContentModified();
+    if (modified) {
+        // 显示退出确认模态框
+        const modal = new bootstrap.Modal(document.getElementById('exitConfirmModal'));
+        modal.show();
+    } else {
+        // 没有修改，直接退出
+        if (window.electronAPI) {
+            window.electronAPI.sendAppQuit();
+        }
+    }
+}
+
+// 取消退出
+document.getElementById('cancelExitBtn').addEventListener('click', function() {
+    const modal = bootstrap.Modal.getInstance(document.getElementById('exitConfirmModal'));
+    if (modal) {
+        modal.hide();
+    }
+});
+
+// 放弃修改并退出
+document.getElementById('discardAndExitBtn').addEventListener('click', async function() {
+    const modal = bootstrap.Modal.getInstance(document.getElementById('exitConfirmModal'));
+    if (modal) {
+        modal.hide();
+    }
+    if (window.electronAPI) {
+        window.electronAPI.sendAppQuit();
+    }
+});
+
+// 保存并退出
+document.getElementById('saveAndExitBtn').addEventListener('click', async function() {
+    const modal = bootstrap.Modal.getInstance(document.getElementById('exitConfirmModal'));
+    if (modal) {
+        modal.hide();
+    }
+    await saveFile();
+    // 等待保存完成后再退出
+    if (window.electronAPI) {
+        window.electronAPI.sendAppQuit();
+    }
+});

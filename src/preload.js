@@ -14,8 +14,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     onMenuSaveAs: (callback) => ipcRenderer.on('menu-save-as', callback),
     onMenuUndo: (callback) => ipcRenderer.on('menu-undo', callback),
     onMenuRedo: (callback) => ipcRenderer.on('menu-redo', callback),
+    onMenuExit: (callback) => ipcRenderer.on('menu-exit', callback),
     // 发送文件保存完成事件
-    sendFileSaved: () => ipcRenderer.send('file-saved')
+    sendFileSaved: () => ipcRenderer.send('file-saved'),
+    // 发送应用退出事件
+    sendAppQuit: () => ipcRenderer.send('app-quit')
 });
 
 // 测试模式专用 API

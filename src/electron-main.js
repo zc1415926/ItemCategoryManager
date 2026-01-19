@@ -107,33 +107,8 @@ function createMenu() {
                 {
                     label: '退出',
                     accelerator: process.platform === 'darwin' ? 'Cmd+Q' : 'Alt+F4',
-                    click: async () => {
-                        // 检查文件是否已保存
-                        const isModified = await mainWindow.webContents.executeJavaScript('window.isContentModified && window.isContentModified()');
-                        if (isModified) {
-                            const result = await dialog.showMessageBox(mainWindow, {
-                                type: 'warning',
-                                buttons: ['保存', '不保存', '取消'],
-                                defaultId: 2,
-                                title: '未保存的修改',
-                                message: '当前文件有未保存的修改，是否保存？'
-                            });
-
-                            if (result.response === 0) {
-                                // 保存
-                                mainWindow.webContents.send('menu-save-file');
-                                // 等待保存完成后再退出
-                                mainWindow.webContents.once('file-saved', () => {
-                                    app.quit();
-                                });
-                            } else if (result.response === 1) {
-                                // 不保存，直接退出
-                                app.quit();
-                            }
-                            // 取消，不退出
-                        } else {
-                            app.quit();
-                        }
+                    click: () => {
+                        mainWindow.webContents.send('menu-exit');
                     }
                 }
             ]
@@ -338,4 +313,9 @@ ipcMain.handle('test-clear-file-paths', () => {
 // 获取测试模式状态
 ipcMain.handle('test-get-mode', () => {
     return { testMode: TEST_MODE };
+});
+
+// 处理应用退出
+ipcMain.on('app-quit', () => {
+    app.quit();
 });

@@ -153,6 +153,31 @@
         </div>
     </div>
 
+    <!-- 退出确认模态框 -->
+    <div class="modal fade" id="exitConfirmModal" tabindex="-1" aria-labelledby="exitConfirmModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exitConfirmModalLabel">确认退出</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>当前文件有未保存的修改，是否保存？</p>
+                    <div class="alert alert-warning">
+                        <strong>⚠️ 注意</strong>
+                        <br>
+                        退出前，您可以选择保存当前修改或放弃修改。
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancelExitBtn">取消</button>
+                    <button type="button" class="btn btn-danger" id="discardAndExitBtn">放弃修改</button>
+                    <button type="button" class="btn btn-primary" id="saveAndExitBtn">保存并退出</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- 删除确认模态框 -->
     <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
